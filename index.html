@@ -15,13 +15,41 @@
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('SW Registered:', reg.scope))
-        .catch(err => console.log('SW Registration Failed:', err));
+    // Automatically load saved payment URL on page startup
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedUrl = localStorage.getItem('user_pay_url');
+        if (savedUrl) {
+            const input = document.getElementById('pay-url-input');
+            if (input) input.value = savedUrl;
+        }
     });
-  }
+
+    // Save the link into local storage
+    function savePayUrl() {
+        const input = document.getElementById('pay-url-input');
+        const url = input ? input.value.trim() : '';
+        
+        if (!url) {
+            alert("Please enter a payment URL first.");
+            return;
+        }
+        
+        localStorage.setItem('user_pay_url', url);
+        alert("Payment link saved!");
+    }
+
+    // Open saved link in a new tab
+    function openPayLink() {
+        const savedUrl = localStorage.getItem('user_pay_url');
+        
+        if (!savedUrl) {
+            alert("No payment URL saved yet. Please enter one and click Save.");
+            return;
+        }
+        
+        const validUrl = savedUrl.match(/^https?:\/\//i) ? savedUrl : 'https://' + savedUrl;
+        window.open(validUrl, '_blank');
+    }
 </script>
         body {
             background: var(--bg); color: var(--text);
@@ -240,7 +268,7 @@
 <footer>
     <div class="score-chip"><span><span id="h-score">0</span></span></div>
     <div class="actions">
-        <!-- PAYMENT LINK & BUTTON ABOVE SUBMIT -->
+        <!-- Payment URL input + Save button -->
         <div id="pay-link-admin" style="display: flex; gap: 4px; margin-bottom: 6px;">
             <input 
                 type="text" 
@@ -255,18 +283,19 @@
             </button>
         </div>
 
+        <!-- Pay Now Button -->
         <button 
             id="pay-now-btn" 
             onclick="openPayLink()" 
-            style="padding: 8px; font-size: 0.85rem; font-weight: bold; background-color: #00d632; color: white; border: none; border-radius: 6px; cursor: pointer; text-transform: uppercase; margin-bottom: 6px;">
+            style="width: 100%; padding: 8px; font-size: 0.85rem; font-weight: bold; background-color: #00d632; color: white; border: none; border-radius: 6px; cursor: pointer; text-transform: uppercase; margin-bottom: 6px;">
             💵 Pay Now
         </button>
 
+        <!-- Submit Button -->
         <button class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
     </div>
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
 </footer>
-
 <script>
     let MASTER_ROSTERS = {};
     let MASTER_SCHEDULE = [];
