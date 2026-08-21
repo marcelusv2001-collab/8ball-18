@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Lebanon 8-Ball Pro</title>
+    <title>8-Ball Cash League Pro</title>
     <style>
         :root {
             --bg: #020617; --felt: #000080; --gold: #fbbf24;
@@ -131,23 +131,65 @@
         .win-btn.h { background: var(--home); color: white; border-color: white; box-shadow: 0 0 10px var(--home); }
         .win-btn.v { background: var(--visit); color: white; border-color: white; box-shadow: 0 0 10px var(--visit); }
 
-        footer { background: #0f172a; padding: 16px; display: grid; grid-template-columns: 1fr 2.5fr 1fr; align-items: center; gap: 8px; flex-shrink: 0; border-top: 1px solid #1e293b; }
+        footer { background: #0f172a; padding: 16px; display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; gap: 8px; flex-shrink: 0; border-top: 1px solid #1e293b; }
         .score-chip { text-align: center; }
         .score-chip span { font-size: 1.6rem; font-weight: 900; color: var(--gold); }
         .actions { display: flex; flex-direction: column; gap: 6px; }
-        .btn-submit { background: var(--gold); color: black; border: none; padding: 12px; border-radius: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
-        .btn-copy { background: #334155; color: white; border: none; padding: 6px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; cursor: pointer; }
+        .btn-submit { background: var(--gold); color: black; border: none; padding: 12px; border-radius: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; width: 100%; }
+
+        /* Signature Modal Styles */
+        #sig-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 3000;
+            display: none; align-items: center; justify-content: center; padding: 15px;
+        }
+        .sig-content {
+            background: var(--slate); border: 2px solid var(--gold);
+            border-radius: 12px; padding: 20px; width: 100%; max-width: 450px;
+            display: flex; flex-direction: column; gap: 15px; position: relative;
+        }
+        .sig-header-row { display: flex; justify-content: space-between; align-items: center; }
+        .sig-content h3 { color: var(--gold); margin: 0; font-size: 1.1rem; }
+        .sig-close-btn { background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 0; }
+        .sig-pad-wrapper {
+            background: white; border-radius: 8px; overflow: hidden; border: 2px solid #334155;
+            touch-action: none; position: relative;
+        }
+        canvas.sig-canvas {
+            width: 100%; height: 160px; display: block; cursor: crosshair;
+        }
+        .sig-btns { display: flex; gap: 10px; }
+        .btn-sig-action { flex: 1; padding: 10px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; font-size: 0.85rem; }
+        .btn-sig-clear { background: #475569; color: white; }
+        .btn-sig-confirm { background: var(--gold); color: black; }
     </style>
 </head>
 <body onclick="closeAllDropdowns(event)">
 
 <div id="help-modal">
     <div class="help-content">
-        <h2>How to use Lebanon 8-Ball</h2>
+        <h2>How to use 8-Ball Cash League</h2>
         <p>1. <b>SETUP:</b> Connect your roster data.</p>
         <p>2. <b>SCORING:</b> Tap 'W' to cycle wins. Home = <b>White Border</b>, Visit = <b>Red Border</b>.</p>
         <p>3. <b>DATA:</b> Manual player entries are saved instantly.</p>
         <button class="help-close" onclick="toggleHelp()">GOT IT!</button>
+    </div>
+</div>
+
+<!-- Signature Modal -->
+<div id="sig-modal">
+    <div class="sig-content">
+        <div class="sig-header-row">
+            <h3 id="sig-title">Home Captain Signature</h3>
+            <button class="sig-close-btn" onclick="closeSignatureModal()">✕</button>
+        </div>
+        <div class="sig-pad-wrapper">
+            <canvas id="sig-canvas" class="sig-canvas"></canvas>
+        </div>
+        <div class="sig-btns">
+            <button class="btn-sig-action btn-sig-clear" onclick="clearSignature()">Clear</button>
+            <button class="btn-sig-action btn-sig-confirm" onclick="confirmSignature()">Accept & Continue</button>
+        </div>
     </div>
 </div>
 
@@ -156,7 +198,7 @@
         <button class="reset-btn" onclick="resetBoard()">🗑️</button>
         <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
     </div>
-    <h1>8-Ball 18 Games</h1>
+    <h1>8-Ball Cash League</h1>
     <button class="help-trigger" onclick="toggleHelp()">❓</button>
 </header>
 
@@ -182,14 +224,14 @@
 <main id="scoring-interface">
     <div class="team-banner">
         <div class="input-wrapper">
-            <input type="text" id="h-team" placeholder="Home Team" readonly onclick="showTeamDropdown(event, 'h-team')">
+            <input type="text" id="h-team" placeholder="Home Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'h-team')">
             <div id="h-team-menu" class="custom-dropdown"></div>
-            <button class="voice-btn" onclick="startVoice('h-team')">🎤</button>
+            <button class="voice-btn" onclick="if(!isMatchApproved()) startVoice('h-team')">🎤</button>
         </div>
         <div class="input-wrapper">
-            <input type="text" id="v-team" placeholder="Visiting Team" readonly onclick="showTeamDropdown(event, 'v-team')">
+            <input type="text" id="v-team" placeholder="Visiting Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'v-team')">
             <div id="v-team-menu" class="custom-dropdown"></div>
-            <button class="voice-btn" onclick="startVoice('v-team')">🎤</button>
+            <button class="voice-btn" onclick="if(!isMatchApproved()) startVoice('v-team')">🎤</button>
         </div>
     </div>
     <div class="game-grid" id="grid"></div>
@@ -198,8 +240,7 @@
 <footer>
     <div class="score-chip"><span><span id="h-score">0</span></span></div>
     <div class="actions">
-        <button class="btn-submit" onclick="handleSubmit()">Submit & Text</button>
-        <button class="btn-copy" onclick="copyResults()">📋 Copy Text</button>
+        <button class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
     </div>
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
 </footer>
@@ -207,9 +248,16 @@
 <script>
     let MASTER_ROSTERS = {};
     let MASTER_SCHEDULE = [];
+    let isApproved = false;
+    let homeSignatureData = null;
+    let visitingSignatureData = null;
+    let currentSigningRole = 'home'; // 'home' or 'visit'
+
     let state = Array.from({length: 18}, (_, i) => ({
-        id: i + 1, h: "", v: "", hTR: false, h8B: false, vTR: false, v8B: false, win: null
+        id: i + 1, h: "", v: "", hTR: false, h8B: false, vTR: false, v8B: false, win: null, hManual: false, vManual: false
     }));
+
+    let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
         const savedRosterUrl = localStorage.getItem('user_sheet_url');
@@ -217,7 +265,156 @@
         if (savedRosterUrl) fetchRosters(savedRosterUrl);
         if (savedStatsUrl) updateStatsButton(savedStatsUrl);
         draw();
+        initSignaturePad();
     });
+
+    function initSignaturePad() {
+        canvas = document.getElementById('sig-canvas');
+        ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000000';
+        }
+        
+        window.addEventListener('resize', () => {
+            if(document.getElementById('sig-modal').style.display === 'flex') {
+                resizeCanvas();
+            }
+        });
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', drawMove);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseleave', stopDraw);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e.touches[0]); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); drawMove(e.touches[0]); });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); stopDraw(); });
+
+        window.resizeSigCanvas = resizeCanvas;
+    }
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (e.clientX - rect.left),
+            y: (e.clientY - rect.top)
+        };
+    }
+
+    function startDraw(e) {
+        drawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+    }
+
+    function drawMove(e) {
+        if (!drawing) return;
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    }
+
+    function stopDraw() {
+        if (!drawing) return;
+        drawing = false;
+        ctx.closePath();
+    }
+
+    function clearSignature() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function handleSubmitMatch() {
+        if (isApproved) {
+            proceedToSendText();
+            return;
+        }
+
+        currentSigningRole = 'home';
+        const hTeamName = document.getElementById('h-team').value || "Home Team";
+        document.getElementById('sig-title').innerText = `${hTeamName} (Home Captain) Signature`;
+        openSignatureModal();
+    }
+
+    function openSignatureModal() {
+        document.getElementById('sig-modal').style.display = 'flex';
+        setTimeout(() => {
+            if(window.resizeSigCanvas) window.resizeSigCanvas();
+            clearSignature();
+        }, 50);
+    }
+
+    function closeSignatureModal() {
+        document.getElementById('sig-modal').style.display = 'none';
+    }
+
+    function confirmSignature() {
+        const blank = document.createElement('canvas');
+        blank.width = canvas.width;
+        blank.height = canvas.height;
+        if (canvas.toDataURL() === blank.toDataURL()) {
+            alert("Please provide a signature before continuing.");
+            return;
+        }
+
+        const dataUrl = canvas.toDataURL();
+
+        if (currentSigningRole === 'home') {
+            homeSignatureData = dataUrl;
+            currentSigningRole = 'visit';
+            const vTeamName = document.getElementById('v-team').value || "Visiting Team";
+            document.getElementById('sig-title').innerText = `${vTeamName} (Visiting Captain) Signature`;
+            clearSignature();
+            setTimeout(() => { if(window.resizeSigCanvas) window.resizeSigCanvas(); }, 50);
+        } else {
+            visitingSignatureData = dataUrl;
+            isApproved = true;
+            closeSignatureModal();
+            proceedToSendText();
+        }
+    }
+
+    function proceedToSendText() {
+        const msg = buildMessage();
+        
+        let shareData = { text: msg };
+        
+        if (navigator.canShare && homeSignatureData && visitingSignatureData) {
+            try {
+                const homeFile = dataURLtoFile(homeSignatureData, 'home_captain_signature.png');
+                const visitFile = dataURLtoFile(visitingSignatureData, 'visiting_captain_signature.png');
+                const testData = { files: [homeFile, visitFile], text: msg };
+                if (navigator.canShare(testData)) {
+                    shareData = testData;
+                }
+            } catch (err) {
+                console.log('File sharing fallback to text only:', err);
+            }
+        }
+
+        if (navigator.share) {
+            navigator.share(shareData).catch(() => {});
+        } else {
+            window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
+        }
+    }
+
+    function dataURLtoFile(dataurl, filename) {
+        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], filename, {type:mime});
+    }
 
     function toggleHelp() {
         const modal = document.getElementById('help-modal');
@@ -302,6 +499,7 @@
     }
 
     function loadSelectedMatch() {
+        if (isMatchApproved()) return;
         const date = document.getElementById('week-selector').value;
         const matchIdx = document.getElementById('match-selector').value;
         if (date === "" || matchIdx === "") return;
@@ -314,6 +512,7 @@
     }
 
     function clearSelectedMatch() {
+        if (isMatchApproved()) return;
         document.getElementById('week-selector').value = "";
         document.getElementById('match-selector').value = "";
         document.getElementById('h-team').value = "";
@@ -323,6 +522,7 @@
     }
 
     function showTeamDropdown(e, id) {
+        if (isMatchApproved()) return;
         e.stopPropagation();
         closeAllDropdowns();
         const menu = document.getElementById(id + '-menu');
@@ -334,6 +534,7 @@
     }
 
     function showPlayerDropdown(e, side, gameIdx) {
+        if (isMatchApproved()) return;
         e.stopPropagation();
         closeAllDropdowns();
         const id = side + '-in-' + (gameIdx + 1);
@@ -347,17 +548,28 @@
     }
 
     function manualInput(id, idx = null, side = null) {
+        if (isMatchApproved()) return;
         const input = document.getElementById(id);
         input.readOnly = false;
         input.value = "";
         input.focus();
-        input.oninput = (e) => { if(idx !== null) state[idx][side] = e.target.value; };
+        input.oninput = (e) => { 
+            if(idx !== null) { 
+                state[idx][side] = e.target.value; 
+                state[idx][side + 'Manual'] = true; 
+            } 
+        };
         input.onblur = () => { input.readOnly = true; };
         closeAllDropdowns();
     }
 
     function selectValue(id, val) { document.getElementById(id).value = val; closeAllDropdowns(); }
-    function selectPlayer(side, idx, val) { state[idx][side] = val; draw(); }
+    function selectPlayer(side, idx, val) { 
+        if (isMatchApproved()) return;
+        state[idx][side] = val; 
+        state[idx][side + 'Manual'] = false;
+        draw(); 
+    }
     function closeAllDropdowns() { document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none'); }
 
     function draw() {
@@ -395,6 +607,7 @@
     }
 
     function setExclusiveMarker(gameId, clickedKey) {
+        if (isMatchApproved()) return;
         const g = state[gameId - 1];
         const active = g[clickedKey];
         g.hTR = g.h8B = g.vTR = g.v8B = false;
@@ -403,20 +616,23 @@
     }
 
     function cycleWin(id) {
+        if (isMatchApproved()) return;
         const g = state[id-1];
         g.win = g.win === null ? 'h' : (g.win === 'h' ? 'v' : null);
         draw();
     }
 
     function resetBoard() {
+        if (isMatchApproved()) { alert("Match is approved, signed, and locked."); return; }
         if(confirm("Reset entire score sheet?")) {
-            state.forEach(g => { g.h=""; g.v=""; g.hTR=g.h8B=g.vTR=g.v8B=false; g.win=null; });
+            state.forEach(g => { g.h=""; g.v=""; g.hTR=g.h8B=g.vTR=g.v8B=false; g.win=null; g.hManual=false; g.vManual=false; });
             document.getElementById('h-team').value = ""; document.getElementById('v-team').value = "";
             draw();
         }
     }
 
     function startVoice(targetId, idx = null, side = null) {
+        if (isMatchApproved()) return;
         const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
         if(!Speech) return;
         const recognition = new Speech();
@@ -426,7 +642,10 @@
         recognition.onresult = (e) => {
             const val = e.results[0][0].transcript;
             document.getElementById(targetId).value = val;
-            if(idx !== null) state[idx][side] = val;
+            if(idx !== null) {
+                state[idx][side] = val;
+                state[idx][side + 'Manual'] = true;
+            }
             draw();
         };
         recognition.start();
@@ -435,24 +654,23 @@
     function buildMessage() {
         const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
         const vT = (document.getElementById('v-team').value || "Visit").toUpperCase();
-        let msg = `🎱 LEBANON 8-BALL\n🏠 ${hT} (${document.getElementById('h-score').innerText})\n🚗 ${vT} (${document.getElementById('v-score').innerText})\n\n`;
+        let msg = `8-BALL CASH LEAGUE\n[HT] ${hT} (${document.getElementById('h-score').innerText})\n[VT] ${vT} (${document.getElementById('v-score').innerText})\n\n`;
         state.forEach(g => {
             if (g.h || g.v || g.win) {
-                const hM = (g.hTR ? '⭐' : '') + (g.h8B ? '🔥' : '');
-                const vM = (g.vTR ? '⭐' : '') + (g.v8B ? '🔥' : '');
-                msg += `Gm${g.id} ${g.h || "P"}${g.win === 'h' ? ' ✅' : ''}${hM} vs ${g.v || "P"}${g.win === 'v' ? ' ✅' : ''}${vM}\n`;
+                const hName = (g.h || "P") + (g.hManual ? ' (NP)' : '');
+                const vName = (g.v || "P") + (g.vManual ? ' (NP)' : '');
+                const hM = (g.hTR ? ' (TR)' : '') + (g.h8B ? ' (8BB)' : '');
+                const vM = (g.vTR ? ' (TR)' : '') + (g.v8B ? ' (8BB)' : '');
+                msg += `Gm${g.id} ${hName}${g.win === 'h' ? ' (W)' : ''}${hM} vs ${vName}${g.win === 'v' ? ' (W)' : ''}${vM}\n--\n--\n`;
             }
         });
-        return msg + `\nTr=⭐ 8bb=🔥`;
+        return msg;
     }
 
-    function handleSubmit() {
-        const msg = buildMessage();
-        if (navigator.share) navigator.share({ text: msg }).catch(() => {});
-        else window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
+    function isMatchApproved() {
+        return isApproved;
     }
 
-    function copyResults() { navigator.clipboard.writeText(buildMessage()).then(() => alert("Copied!")); }
     function updateStatsButton(url) { const btn = document.getElementById('view-stats'); if (url) { btn.href = url; btn.style.display = 'block'; } }
     function clearSettings() { if(confirm("Clear settings?")) { localStorage.clear(); location.reload(); } }
 </script>
