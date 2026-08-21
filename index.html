@@ -240,6 +240,28 @@
 <footer>
     <div class="score-chip"><span><span id="h-score">0</span></span></div>
     <div class="actions">
+        <!-- PAYMENT LINK & BUTTON ABOVE SUBMIT -->
+        <div id="pay-link-admin" style="display: flex; gap: 4px; margin-bottom: 6px;">
+            <input 
+                type="text" 
+                id="pay-url-input" 
+                placeholder="https://cash.app/$YourTag" 
+                style="flex: 1; padding: 6px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white;"
+            />
+            <button 
+                onclick="savePayUrl()" 
+                style="padding: 6px 8px; font-size: 0.75rem; font-weight: bold; background: var(--gold); color: black; border: none; border-radius: 6px; cursor: pointer;">
+                Save
+            </button>
+        </div>
+
+        <button 
+            id="pay-now-btn" 
+            onclick="openPayLink()" 
+            style="padding: 8px; font-size: 0.85rem; font-weight: bold; background-color: #00d632; color: white; border: none; border-radius: 6px; cursor: pointer; text-transform: uppercase; margin-bottom: 6px;">
+            💵 Pay Now
+        </button>
+
         <button class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
     </div>
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
