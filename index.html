@@ -14,43 +14,7 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-<script>
-    // Automatically load saved payment URL on page startup
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedUrl = localStorage.getItem('user_pay_url');
-        if (savedUrl) {
-            const input = document.getElementById('pay-url-input');
-            if (input) input.value = savedUrl;
-        }
-    });
 
-    // Save the link into local storage
-    function savePayUrl() {
-        const input = document.getElementById('pay-url-input');
-        const url = input ? input.value.trim() : '';
-        
-        if (!url) {
-            alert("Please enter a payment URL first.");
-            return;
-        }
-        
-        localStorage.setItem('user_pay_url', url);
-        alert("Payment link saved!");
-    }
-
-    // Open saved link in a new tab
-    function openPayLink() {
-        const savedUrl = localStorage.getItem('user_pay_url');
-        
-        if (!savedUrl) {
-            alert("No payment URL saved yet. Please enter one and click Save.");
-            return;
-        }
-        
-        const validUrl = savedUrl.match(/^https?:\/\//i) ? savedUrl : 'https://' + savedUrl;
-        window.open(validUrl, '_blank');
-    }
-</script>
         body {
             background: var(--bg); color: var(--text);
             font-family: system-ui, -apple-system, sans-serif;
@@ -296,13 +260,14 @@
     </div>
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
 </footer>
+
 <script>
     let MASTER_ROSTERS = {};
     let MASTER_SCHEDULE = [];
     let isApproved = false;
     let homeSignatureData = null;
     let visitingSignatureData = null;
-    let currentSigningRole = 'home'; // 'home' or 'visit'
+    let currentSigningRole = 'home';
 
     let state = Array.from({length: 18}, (_, i) => ({
         id: i + 1, h: "", v: "", hTR: false, h8B: false, vTR: false, v8B: false, win: null, hManual: false, vManual: false
@@ -311,13 +276,48 @@
     let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
+        // Load payment URL
+        const savedPayUrl = localStorage.getItem('user_pay_url');
+        if (savedPayUrl) {
+            const payInput = document.getElementById('pay-url-input');
+            if (payInput) payInput.value = savedPayUrl;
+        }
+
+        // Load Roster and Stats URLs
         const savedRosterUrl = localStorage.getItem('user_sheet_url');
         const savedStatsUrl = localStorage.getItem('user_stats_url');
         if (savedRosterUrl) fetchRosters(savedRosterUrl);
         if (savedStatsUrl) updateStatsButton(savedStatsUrl);
+        
         draw();
         initSignaturePad();
     });
+
+    // Payment Link Helpers
+    function savePayUrl() {
+        const input = document.getElementById('pay-url-input');
+        const url = input ? input.value.trim() : '';
+        
+        if (!url) {
+            alert("Please enter a payment URL first.");
+            return;
+        }
+        
+        localStorage.setItem('user_pay_url', url);
+        alert("Payment link saved!");
+    }
+
+    function openPayLink() {
+        const savedUrl = localStorage.getItem('user_pay_url');
+        
+        if (!savedUrl) {
+            alert("No payment URL saved yet. Please enter one and click Save.");
+            return;
+        }
+        
+        const validUrl = savedUrl.match(/^https?:\/\//i) ? savedUrl : 'https://' + savedUrl;
+        window.open(validUrl, '_blank');
+    }
 
     function initSignaturePad() {
         canvas = document.getElementById('sig-canvas');
