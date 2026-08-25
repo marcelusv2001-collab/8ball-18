@@ -30,26 +30,41 @@
         header h1 { font-size: 0.9rem; margin: 0; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
         
         .header-btns { display: flex; gap: 15px; align-items: center; }
-        .reset-btn, .help-trigger { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; margin: 0; }
+        .reset-btn, .help-trigger, .pay-modal-trigger { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; margin: 0; }
         .help-trigger { font-size: 1.4rem; color: var(--gold); }
         .stats-link-btn { background: var(--gold); color: black; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-decoration: none; display: none; }
 
-        #help-modal {
+        #help-modal, #pay-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 2000;
             display: none; padding: 20px; overflow-y: auto;
         }
-        .help-content {
+        .help-content, .pay-modal-content {
             background: var(--slate); border: 2px solid var(--gold);
             border-radius: 12px; padding: 20px; max-width: 500px; margin: 0 auto;
         }
-        .help-content h2 { color: var(--gold); margin-top: 0; font-size: 1.2rem; }
+        .help-content h2, .pay-modal-content h2 { color: var(--gold); margin-top: 0; font-size: 1.2rem; }
         .help-content h3 { color: var(--gold); font-size: 0.9rem; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
         .help-content p, .help-content li { font-size: 0.85rem; line-height: 1.4; color: #cbd5e1; }
-        .help-close {
+        .help-close, .pay-modal-close {
             background: var(--gold); color: black; border: none; width: 100%;
             padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer;
         }
+
+        .pay-input-group {
+            display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;
+        }
+        .pay-input-group label {
+            font-size: 0.8rem; color: var(--gold); font-weight: bold;
+        }
+        .pay-input-group input {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white; font-size: 0.9rem;
+        }
+        .pay-calc-result {
+            background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-top: 15px; text-align: center;
+        }
+        .pay-calc-result div { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px; }
+        .pay-calc-result span { font-size: 1.5rem; font-weight: 900; color: #22c55e; }
 
         details { background: #1e293b; border-bottom: 1px solid var(--gold); z-index: 100; }
         summary { color: var(--gold); font-size: 0.75rem; cursor: pointer; padding: 10px; font-weight: bold; list-style: none; text-align: center; }
@@ -168,6 +183,29 @@
     </div>
 </div>
 
+<div id="pay-modal">
+    <div class="pay-modal-content">
+        <h2>Match Payment Calculator</h2>
+        <div class="pay-input-group">
+            <label for="weekly-match-fee">Weekly Match Fee ($)</label>
+            <input type="number" id="weekly-match-fee" placeholder="0" oninput="calculateMatchOwed()">
+        </div>
+        <div class="pay-input-group">
+            <label for="val-8bb">8BB Worth ($)</label>
+            <input type="number" id="val-8bb" placeholder="0" oninput="calculateMatchOwed()">
+        </div>
+        <div class="pay-input-group">
+            <label for="val-run">Run Worth ($)</label>
+            <input type="number" id="val-run" placeholder="0" oninput="calculateMatchOwed()">
+        </div>
+        <div class="pay-calc-result">
+            <div>Total Amount Owed:</div>
+            <span id="amount-owed-display">$0.00</span>
+        </div>
+        <button class="pay-modal-close" onclick="togglePayModal()">CLOSE</button>
+    </div>
+</div>
+
 <!-- Signature Modal -->
 <div id="sig-modal">
     <div class="sig-content">
@@ -189,6 +227,7 @@
     <div class="header-btns">
         <button class="reset-btn" onclick="resetBoard()">🗑️</button>
         <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
+        <button class="pay-modal-trigger" onclick="togglePayModal()">💳</button>
     </div>
     <h1>8-Ball Cash League</h1>
     <button class="help-trigger" onclick="toggleHelp()">❓</button>
@@ -252,7 +291,7 @@
             id="pay-now-btn" 
             onclick="openPayLink()" 
             style="width: 100%; padding: 8px; font-size: 0.85rem; font-weight: bold; background-color: #00d632; color: white; border: none; border-radius: 6px; cursor: pointer; text-transform: uppercase; margin-bottom: 6px;">
-            💵 Pay Now
+            💵 Pay Now (<span id="pay-btn-amount">$0.00</span>)
         </button>
 
         <!-- Submit Button -->
@@ -291,6 +330,7 @@
         
         draw();
         initSignaturePad();
+        calculateMatchOwed();
     });
 
     // Payment Link Helpers
@@ -317,6 +357,39 @@
         
         const validUrl = savedUrl.match(/^https?:\/\//i) ? savedUrl : 'https://' + savedUrl;
         window.open(validUrl, '_blank');
+    }
+
+    function togglePayModal() {
+        const modal = document.getElementById('pay-modal');
+        const isOpening = modal.style.display !== 'block';
+        modal.style.display = isOpening ? 'block' : 'none';
+        if (isOpening) {
+            calculateMatchOwed();
+        }
+    }
+
+    function calculateMatchOwed() {
+        const matchFee = parseFloat(document.getElementById('weekly-match-fee').value) || 0;
+        const val8bb = parseFloat(document.getElementById('val-8bb').value) || 0;
+        const valRun = parseFloat(document.getElementById('val-run').value) || 0;
+
+        let count8bb = 0;
+        let countRun = 0;
+
+        state.forEach(g => {
+            if (g.h8B || g.v8B) count8bb++;
+            if (g.hTR || g.vTR) countRun++;
+        });
+
+        const totalDeduction = (count8bb * val8bb) + (countRun * valRun);
+        const amountOwed = matchFee - totalDeduction;
+        const formattedAmount = '$' + amountOwed.toFixed(2);
+
+        const modalDisplay = document.getElementById('amount-owed-display');
+        if (modalDisplay) modalDisplay.innerText = formattedAmount;
+
+        const payBtnDisplay = document.getElementById('pay-btn-amount');
+        if (payBtnDisplay) payBtnDisplay.innerText = formattedAmount;
     }
 
     function initSignaturePad() {
@@ -655,32 +728,34 @@
         `).join('');
         document.getElementById('h-score').innerText = state.filter(g => g.win === 'h').length;
         document.getElementById('v-score').innerText = state.filter(g => g.win === 'v').length;
+        
+        calculateMatchOwed();
     }
 
     function setExclusiveMarker(gameId, clickedKey) {
-    if (isMatchApproved()) return;
-    const g = state[gameId - 1];
-    const active = g[clickedKey];
-    
-    // Clear all markers across both players
-    g.hTR = g.h8B = g.vTR = g.v8B = false;
-    
-    if (!active) {
-        g[clickedKey] = true;
+        if (isMatchApproved()) return;
+        const g = state[gameId - 1];
+        const active = g[clickedKey];
         
-        // Auto-trigger the win for the corresponding player
-        if (clickedKey === 'hTR' || clickedKey === 'h8B') {
-            g.win = 'h';
-        } else if (clickedKey === 'vTR' || clickedKey === 'v8B') {
-            g.win = 'v';
+        // Clear all markers across both players
+        g.hTR = g.h8B = g.vTR = g.v8B = false;
+        
+        if (!active) {
+            g[clickedKey] = true;
+            
+            // Auto-trigger the win for the corresponding player
+            if (clickedKey === 'hTR' || clickedKey === 'h8B') {
+                g.win = 'h';
+            } else if (clickedKey === 'vTR' || clickedKey === 'v8B') {
+                g.win = 'v';
+            }
+        } else {
+            // Optional: Reset the win state if the marker is toggled OFF
+            g.win = null;
         }
-    } else {
-        // Optional: Reset the win state if the marker is toggled OFF
-        g.win = null;
+        
+        draw();
     }
-    
-    draw();
-}
 
     function cycleWin(id) {
         if (isMatchApproved()) return;
