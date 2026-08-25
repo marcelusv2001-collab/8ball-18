@@ -315,12 +315,21 @@
     let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
-        // Load payment URL
+        // Load saved payment URL
         const savedPayUrl = localStorage.getItem('user_pay_url');
         if (savedPayUrl) {
             const payInput = document.getElementById('pay-url-input');
             if (payInput) payInput.value = savedPayUrl;
         }
+
+        // Load saved payment rates
+        const savedMatchFee = localStorage.getItem('pay_match_fee');
+        const savedVal8bb = localStorage.getItem('pay_val_8bb');
+        const savedValRun = localStorage.getItem('pay_val_run');
+        
+        if (savedMatchFee !== null) document.getElementById('weekly-match-fee').value = savedMatchFee;
+        if (savedVal8bb !== null) document.getElementById('val-8bb').value = savedVal8bb;
+        if (savedValRun !== null) document.getElementById('val-run').value = savedValRun;
 
         // Load Roster and Stats URLs
         const savedRosterUrl = localStorage.getItem('user_sheet_url');
@@ -369,9 +378,18 @@
     }
 
     function calculateMatchOwed() {
-        const matchFee = parseFloat(document.getElementById('weekly-match-fee').value) || 0;
-        const val8bb = parseFloat(document.getElementById('val-8bb').value) || 0;
-        const valRun = parseFloat(document.getElementById('val-run').value) || 0;
+        const matchFeeInput = document.getElementById('weekly-match-fee').value;
+        const val8bbInput = document.getElementById('val-8bb').value;
+        const valRunInput = document.getElementById('val-run').value;
+
+        // Save fee rates to localStorage
+        localStorage.setItem('pay_match_fee', matchFeeInput);
+        localStorage.setItem('pay_val_8bb', val8bbInput);
+        localStorage.setItem('pay_val_run', valRunInput);
+
+        const matchFee = parseFloat(matchFeeInput) || 0;
+        const val8bb = parseFloat(val8bbInput) || 0;
+        const valRun = parseFloat(valRunInput) || 0;
 
         let count8bb = 0;
         let countRun = 0;
