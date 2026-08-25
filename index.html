@@ -658,13 +658,29 @@
     }
 
     function setExclusiveMarker(gameId, clickedKey) {
-        if (isMatchApproved()) return;
-        const g = state[gameId - 1];
-        const active = g[clickedKey];
-        g.hTR = g.h8B = g.vTR = g.v8B = false;
-        if (!active) g[clickedKey] = true;
-        draw();
+    if (isMatchApproved()) return;
+    const g = state[gameId - 1];
+    const active = g[clickedKey];
+    
+    // Clear all markers across both players
+    g.hTR = g.h8B = g.vTR = g.v8B = false;
+    
+    if (!active) {
+        g[clickedKey] = true;
+        
+        // Auto-trigger the win for the corresponding player
+        if (clickedKey === 'hTR' || clickedKey === 'h8B') {
+            g.win = 'h';
+        } else if (clickedKey === 'vTR' || clickedKey === 'v8B') {
+            g.win = 'v';
+        }
+    } else {
+        // Optional: Reset the win state if the marker is toggled OFF
+        g.win = null;
     }
+    
+    draw();
+}
 
     function cycleWin(id) {
         if (isMatchApproved()) return;
