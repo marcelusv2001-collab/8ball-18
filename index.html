@@ -24,7 +24,7 @@
 
         header {
             background: linear-gradient(to bottom, var(--wood), #000080);
-            padding: 10px; display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 10px; display: flex; justify-content: space-between; align-items: center;
             border-bottom: 2px solid var(--gold); flex-shrink: 0;
         }
         header h1 { font-size: 0.9rem; margin: 0; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
@@ -67,7 +67,7 @@
         .pay-calc-result span { font-size: 1.5rem; font-weight: 900; color: #22c55e; }
 
         details { background: #1e293b; border-bottom: 1px solid var(--gold); z-index: 100; }
-        summary { color: var(--gold); font-size: 0.75rem; cursor: pointer; padding: 10px; font-weight: bold; list-style: none; text-align: center; }
+        summary { color: var(--gold); font-size: 0.75rem; cursor: pointer; padding: 8px 10px; font-weight: bold; list-style: none; text-align: center; }
         .settings-content { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 
         .status-container {
@@ -138,11 +138,79 @@
         .win-btn.h { background: var(--home); color: white; border-color: white; box-shadow: 0 0 10px var(--home); }
         .win-btn.v { background: var(--visit); color: white; border-color: white; box-shadow: 0 0 10px var(--visit); }
 
-        footer { background: #0f172a; padding: 16px; display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; gap: 8px; flex-shrink: 0; border-top: 1px solid #1e293b; }
+        /* Compact Single-Row Footer */
+        footer.app-footer { 
+            background: #0f172a; 
+            padding: 8px; 
+            display: grid; 
+            grid-template-columns: 45px 1fr 1fr 45px; 
+            align-items: center; 
+            gap: 6px; 
+            flex-shrink: 0; 
+            border-top: 1px solid #1e293b; 
+        }
         .score-chip { text-align: center; }
-        .score-chip span { font-size: 1.6rem; font-weight: 900; color: var(--gold); }
-        .actions { display: flex; flex-direction: column; gap: 6px; }
-        .btn-submit { background: var(--gold); color: black; border: none; padding: 12px; border-radius: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; width: 100%; }
+        .score-chip span { font-size: 1.4rem; font-weight: 900; color: var(--gold); }
+        
+        .btn-pay-action {
+            padding: 8px 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            background-color: #00d632;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            height: 38px;
+        }
+
+        .btn-submit { 
+            background: var(--gold); 
+            color: black; 
+            border: none; 
+            padding: 8px 4px; 
+            border-radius: 6px; 
+            font-weight: 900; 
+            font-size: 0.75rem;
+            text-transform: uppercase; 
+            cursor: pointer; 
+            height: 38px;
+            white-space: nowrap;
+        }
+
+        /* Site Footer Links */
+        .site-footer {
+            background: #020617;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+            border-top: 1px solid #1e293b;
+            flex-shrink: 0;
+        }
+
+        .site-footer p {
+            margin: 0;
+            color: #64748b;
+        }
+
+        .site-footer nav {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+        }
+
+        .site-footer nav a {
+            color: #94a3b8;
+            text-decoration: none;
+        }
 
         /* Signature Modal Styles */
         #sig-modal {
@@ -245,6 +313,13 @@
         <select id="match-selector" style="display:none;" onchange="loadSelectedMatch()"></select>
         <button id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
         <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
+        <div class="pay-input-group" style="margin-top: 6px;">
+            <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
+            <div style="display: flex; gap: 4px;">
+                <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag" style="flex: 1;">
+                <button onclick="savePayUrl()" style="padding: 6px 10px; font-weight: bold; background: var(--gold); color: black; border: none; border-radius: 6px; cursor: pointer;">Save</button>
+            </div>
+        </div>
         <div class="settings-btns">
             <button class="btn-load" onclick="saveSettings()">SAVE ALL</button>
             <button class="btn-clear" onclick="clearSettings()">RESET</button>
@@ -268,36 +343,25 @@
     <div class="game-grid" id="grid"></div>
 </main>
 
-<footer>
+<footer class="app-footer">
     <div class="score-chip"><span><span id="h-score">0</span></span></div>
-    <div class="actions">
-        <!-- Payment URL input + Save button -->
-        <div id="pay-link-admin" style="display: flex; gap: 4px; margin-bottom: 6px;">
-            <input 
-                type="text" 
-                id="pay-url-input" 
-                placeholder="https://cash.app/$YourTag" 
-                style="flex: 1; padding: 6px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white;"
-            />
-            <button 
-                onclick="savePayUrl()" 
-                style="padding: 6px 8px; font-size: 0.75rem; font-weight: bold; background: var(--gold); color: black; border: none; border-radius: 6px; cursor: pointer;">
-                Save
-            </button>
-        </div>
-
-        <!-- Pay Now Button -->
-        <button 
-            id="pay-now-btn" 
-            onclick="openPayLink()" 
-            style="width: 100%; padding: 8px; font-size: 0.85rem; font-weight: bold; background-color: #00d632; color: white; border: none; border-radius: 6px; cursor: pointer; text-transform: uppercase; margin-bottom: 6px;">
-            💵 Pay Now (<span id="pay-btn-amount">$0.00</span>)
-        </button>
-
-        <!-- Submit Button -->
-        <button class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
-    </div>
+    
+    <button id="pay-now-btn" class="btn-pay-action" onclick="openPayLink()">
+        💵 Pay (<span id="pay-btn-amount">$0.00</span>)
+    </button>
+    
+    <button class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
+    
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
+</footer>
+
+<footer class="site-footer">
+  <p>&copy; 2026 MVP TV. All rights reserved.</p>
+  <nav>
+    <a href="/about.html">About Us</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/privacy.html">Privacy Policy</a>
+  </nav>
 </footer>
 
 <script>
@@ -360,7 +424,7 @@
         const savedUrl = localStorage.getItem('user_pay_url');
         
         if (!savedUrl) {
-            alert("No payment URL saved yet. Please enter one and click Save.");
+            alert("No payment URL saved yet. Please expand SETUP to save your payment URL.");
             return;
         }
         
@@ -768,7 +832,7 @@
                 g.win = 'v';
             }
         } else {
-            // Optional: Reset the win state if the marker is toggled OFF
+            // Reset win state if marker is toggled OFF
             g.win = null;
         }
         
@@ -834,42 +898,5 @@
     function updateStatsButton(url) { const btn = document.getElementById('view-stats'); if (url) { btn.href = url; btn.style.display = 'block'; } }
     function clearSettings() { if(confirm("Clear settings?")) { localStorage.clear(); location.reload(); } }
 </script>
-    <!-- Your existing page content ends here -->
-
-    <footer>
-  <style>
-    footer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 15px;
-      text-align: center;
-    }
-
-    footer p {
-      margin: 0;
-    }
-
-    footer nav {
-      display: flex;
-      flex-direction: row;
-      gap: 15px;
-    }
-  </style>
-
-  <!-- Line 1: Copyright -->
-  <p>&copy; 2026 MVP TV. All rights reserved.</p>
-
-  <!-- Line 2: Navigation Links -->
-  <nav>
-    <a href="/about.html">About Us</a>
-    <a href="/contact.html">Contact</a>
-    <a href="/privacy.html">Privacy Policy</a>
-  </nav>
-</footer>
-
-
-    
 </body>
 </html>
