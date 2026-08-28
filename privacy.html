@@ -1,25 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy</title>
+    <style>
+        :root {
+            --primary-color: #0f172a;
+            --text-color: #334155;
+            --heading-color: #0f172a;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --accent-color: #2563eb;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1.125rem; /* 18px base text size */
+            line-height: 1.7;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 3rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2.5rem; /* 40px */
+            font-weight: 800;
+            color: var(--heading-color);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            letter-spacing: -0.025em;
+        }
+
+        h2 {
+            font-size: 1.5rem; /* 24px */
+            font-weight: 700;
+            color: var(--heading-color);
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            margin-bottom: 1.25rem;
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: #1d4ed8;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                font-size: 1rem;
+                padding: 1rem 0.5rem;
+            }
+            .container {
+                padding: 1.5rem 1.25rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            h2 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Privacy Policy</h1>
-    <p>This Privacy Policy explains how our billiard applications collect, use, and manage user data.</p>
-    
-    <h2>Information We Collect</h2>
-    <p>Our applications may collect player names, game scores, and tournament statistics to provide core app functionality, such as leaderboards and scorekeeping.</p>
-    
-    <h2>Google Sheets Integration</h2>
-    <p>Users may choose to connect their Google Sheets accounts to sync player data and statistics. We only access the spreadsheets authorized by the user to read and write app-related data. We do not store or share your Google account credentials or unauthorized drive files.</p>
-    
-    <h2>External Payment Links</h2>
-    <p>Our application may provide links to external third-party payment processors. We do not collect, process, or store financial credentials or payment card details within the app. All payment transactions take place entirely on those external platforms and are subject to their respective privacy policies.</p>
+    <div class="container">
+        <h1>Privacy Policy</h1>
+        <p>This Privacy Policy explains how our billiard applications collect, use, and manage user data.</p>
+        
+        <h2>Information We Collect</h2>
+        <p>Our applications may collect player names, game scores, and tournament statistics to provide core app functionality, such as leaderboards and scorekeeping.</p>
+        
+        <h2>Google Sheets Integration</h2>
+        <p>Users may choose to connect their Google Sheets accounts to sync player data and statistics. We only access the spreadsheets authorized by the user to read and write app-related data. We do not store or share your Google account credentials or unauthorized drive files.</p>
+        
+        <h2>External Payment Links</h2>
+        <p>Our application may provide links to external third-party payment processors. We do not collect, process, or store financial credentials or payment card details within the app. All payment transactions take place entirely on those external platforms and are subject to their respective privacy policies.</p>
 
-    <h2>Third-Party Services and Advertising</h2>
-    <p>We use third-party services like Google AdSense to serve advertisements. Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to this website or other websites. These services may also collect IP addresses and standard web device identifiers to serve personalized or non-personalized ads. You can manage or opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google Ads Settings</a>.</p>
-    
-    <h2>Contact Us</h2>
-    <p>If you have any questions about this policy or your data, please contact us via our <a href="contact.html">Contact page</a>.</p>
+        <h2>Third-Party Services and Advertising</h2>
+        <p>We use third-party services like Google AdSense to serve advertisements. Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to this website or other websites. These services may also collect IP addresses and standard web device identifiers to serve personalized or non-personalized ads. You can manage or opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google Ads Settings</a>.</p>
+        
+        <h2>Contact Us</h2>
+        <p>If you have any questions about this policy or your data, please contact us via our <a href="contact.html">Contact page</a>.</p>
+    </div>
 </body>
 </html>
