@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>8-Ball 18 Games</title>
+    <title>8 Ball 18 Games</title>
     <style>
         :root {
             --bg: #020617; --felt: #000080; --gold: #fbbf24;
@@ -26,27 +26,46 @@
             background: linear-gradient(to bottom, var(--wood), #000080);
             padding: 8px 10px; display: flex; justify-content: space-between; align-items: center;
             border-bottom: 2px solid var(--gold); flex-shrink: 0;
+            transition: filter 0.3s ease, opacity 0.3s ease;
         }
         header h1 { font-size: 0.9rem; margin: 0; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
         
         .header-btns { display: flex; gap: 15px; align-items: center; }
-        .reset-btn, .help-trigger, .pay-modal-trigger { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; margin: 0; }
+        .reset-btn, .help-trigger { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; margin: 0; }
+        .reset-btn { position: relative; z-index: 1001; pointer-events: auto !important; }
         .help-trigger { font-size: 1.4rem; color: var(--gold); }
         .stats-link-btn { background: var(--gold); color: black; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-decoration: none; display: none; }
 
-        #help-modal, #pay-modal {
+        #help-modal, #match-picker-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 2000;
             display: none; padding: 20px; overflow-y: auto;
         }
-        .help-content, .pay-modal-content {
+        .modal-content {
             background: var(--slate); border: 2px solid var(--gold);
             border-radius: 12px; padding: 20px; max-width: 500px; margin: 0 auto;
         }
-        .help-content h2, .pay-modal-content h2 { color: var(--gold); margin-top: 0; font-size: 1.2rem; }
-        .help-content h3 { color: var(--gold); font-size: 0.9rem; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
-        .help-content p, .help-content li { font-size: 0.85rem; line-height: 1.4; color: #cbd5e1; }
-        .help-close, .pay-modal-close {
+        .modal-content h2 { color: var(--gold); margin-top: 0; font-size: 1.2rem; }
+        .modal-content p { font-size: 0.85rem; line-height: 1.4; color: #cbd5e1; }
+        
+        .modal-select-group {
+            display: flex; flex-direction: column; gap: 10px; margin: 15px 0;
+        }
+        .modal-select-group label {
+            font-size: 0.8rem; color: var(--gold); font-weight: bold;
+        }
+        .modal-select-group select {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white; font-size: 0.85rem;
+        }
+        .modal-btn-row {
+            display: flex; gap: 10px; margin-top: 15px;
+        }
+        .modal-btn {
+            flex: 1; padding: 12px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; font-size: 0.85rem;
+        }
+        .btn-modal-cancel { background: #475569; color: white; }
+        .btn-modal-apply { background: var(--gold); color: black; }
+        .help-close {
             background: var(--gold); color: black; border: none; width: 100%;
             padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer;
         }
@@ -93,7 +112,7 @@
         .btn-clear { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .btn-clear-match { background: #475569; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; width: 100%; margin-top: 5px; }
 
-        #scoring-interface { flex: 1; overflow-y: auto; padding: 6px; background: var(--bg); position: relative; }
+        #scoring-interface { flex: 1; overflow-y: auto; padding: 6px; background: var(--bg); position: relative; transition: filter 0.3s ease, opacity 0.3s ease; }
         .team-banner { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
         .input-wrapper { position: relative; display: flex; align-items: center; background: var(--slate); border-radius: 8px; padding-right: 4px; border: 1px solid #334155; }
         .input-wrapper input { width: 100%; background: transparent; border: none; color: white; padding: 12px; font-size: 0.9rem; outline: none; font-weight: bold; cursor: pointer; }
@@ -104,10 +123,7 @@
         
         .player-box { position: relative; display: flex; flex-direction: column; padding: 4px; border: 2px solid transparent; transition: border 0.2s ease; border-radius: 8px; }
         
-        /* Home Winner: White Border */
         .player-box.win-home { border-color: white; background: rgba(255, 255, 255, 0.05); }
-        
-        /* Visiting Winner: Red Border */
         .player-box.win-visit { border-color: var(--visit); background: rgba(239, 68, 68, 0.1); }
         
         .p-input-wrap { display: flex; align-items: center; background: rgba(0,0,0,0.4); border-radius: 6px; padding-right: 2px; }
@@ -134,11 +150,10 @@
         .marker { font-size: 0.65rem; padding: 2px 6px; background: rgba(0,0,0,0.6); border-radius: 4px; color: #94a3b8; cursor: pointer; border: 1px solid transparent; }
         .marker.on { background: var(--gold); color: black; font-weight: bold; border-color: white; }
 
-        .win-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 900; background: #0f172a; color: #475569; justify-self: center; }
+        .win-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 900; background: #0f172a; color: #475569; justify-self: center; cursor: pointer; }
         .win-btn.h { background: var(--home); color: white; border-color: white; box-shadow: 0 0 10px var(--home); }
         .win-btn.v { background: var(--visit); color: white; border-color: white; box-shadow: 0 0 10px var(--visit); }
 
-        /* Compact Single-Row Footer */
         footer.app-footer { 
             background: #0f172a; 
             padding: 8px; 
@@ -148,6 +163,7 @@
             gap: 6px; 
             flex-shrink: 0; 
             border-top: 1px solid #1e293b; 
+            transition: filter 0.3s ease, opacity 0.3s ease;
         }
         .score-chip { text-align: center; }
         .score-chip span { font-size: 1.4rem; font-weight: 900; color: var(--gold); }
@@ -182,7 +198,6 @@
             white-space: nowrap;
         }
 
-        /* Site Footer Links */
         .site-footer {
             background: #020617;
             display: flex;
@@ -196,23 +211,10 @@
             flex-shrink: 0;
         }
 
-        .site-footer p {
-            margin: 0;
-            color: #64748b;
-        }
+        .site-footer p { margin: 0; color: #64748b; }
+        .site-footer nav { display: flex; flex-direction: row; gap: 12px; }
+        .site-footer nav a { color: #94a3b8; text-decoration: none; }
 
-        .site-footer nav {
-            display: flex;
-            flex-direction: row;
-            gap: 12px;
-        }
-
-        .site-footer nav a {
-            color: #94a3b8;
-            text-decoration: none;
-        }
-
-        /* Signature Modal Styles */
         #sig-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 3000;
@@ -230,51 +232,51 @@
             background: white; border-radius: 8px; overflow: hidden; border: 2px solid #334155;
             touch-action: none; position: relative;
         }
-        canvas.sig-canvas {
-            width: 100%; height: 160px; display: block; cursor: crosshair;
-        }
+        canvas.sig-canvas { width: 100%; height: 160px; display: block; cursor: crosshair; }
         .sig-btns { display: flex; gap: 10px; }
         .btn-sig-action { flex: 1; padding: 10px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; font-size: 0.85rem; }
         .btn-sig-clear { background: #475569; color: white; }
         .btn-sig-confirm { background: var(--gold); color: black; }
+
+        /* Locked state styles */
+        .locked {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body onclick="closeAllDropdowns(event)">
 
 <div id="help-modal">
-    <div class="help-content">
-        <h2>How to use 8-Ball Cash League</h2>
+    <div class="modal-content">
+        <h2>How to use 8 Ball 18 Games</h2>
         <p>1. <b>SETUP:</b> Connect your roster data.</p>
         <p>2. <b>SCORING:</b> Tap 'W' to cycle wins. Home = <b>White Border</b>, Visit = <b>Red Border</b>.</p>
-        <p>3. <b>DATA:</b> Manual player entries are saved instantly.</p>
+        <p>3. <b>DATA:</b> Manual player entries and match progress are saved automatically.</p>
         <button class="help-close" onclick="toggleHelp()">GOT IT!</button>
     </div>
 </div>
 
-<div id="pay-modal">
-    <div class="pay-modal-content">
-        <h2>Match Payment Calculator</h2>
-        <div class="pay-input-group">
-            <label for="weekly-match-fee">Weekly Match Fee ($)</label>
-            <input type="number" id="weekly-match-fee" placeholder="0" oninput="calculateMatchOwed()">
+<div id="match-picker-modal">
+    <div class="modal-content">
+        <h2>Select Match Schedule</h2>
+        <p>Choose your game date and match details below, or click cancel to enter teams manually.</p>
+        <div class="modal-select-group">
+            <label for="popup-week-selector">Match Date</label>
+            <select id="popup-week-selector" onchange="updatePopupMatchupList()"></select>
         </div>
-        <div class="pay-input-group">
-            <label for="val-8bb">8BB Worth ($)</label>
-            <input type="number" id="val-8bb" placeholder="0" oninput="calculateMatchOwed()">
+        <div class="modal-select-group">
+            <label for="popup-match-selector">Select Match</label>
+            <select id="popup-match-selector"></select>
         </div>
-        <div class="pay-input-group">
-            <label for="val-run">Run Worth ($)</label>
-            <input type="number" id="val-run" placeholder="0" oninput="calculateMatchOwed()">
+        <div class="modal-btn-row">
+            <button class="modal-btn btn-modal-cancel" onclick="closeMatchPickerModal()">Cancel (Use App Manually)</button>
+            <button class="modal-btn btn-modal-apply" onclick="applyPopupMatchSelection()">Load Selected Match</button>
         </div>
-        <div class="pay-calc-result">
-            <div>Total Amount Owed:</div>
-            <span id="amount-owed-display">$0.00</span>
-        </div>
-        <button class="pay-modal-close" onclick="togglePayModal()">CLOSE</button>
     </div>
 </div>
 
-<!-- Signature Modal -->
 <div id="sig-modal">
     <div class="sig-content">
         <div class="sig-header-row">
@@ -291,13 +293,12 @@
     </div>
 </div>
 
-<header>
+<header id="app-header">
     <div class="header-btns">
         <button class="reset-btn" onclick="resetBoard()">🗑️</button>
         <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
-        <button class="pay-modal-trigger" onclick="togglePayModal()">💳</button>
     </div>
-    <h1>8-Ball Cash League</h1>
+    <h1>8 Ball 18 Games</h1>
     <button class="help-trigger" onclick="toggleHelp()">❓</button>
 </header>
 
@@ -309,20 +310,36 @@
             <span id="status-text">ROSTER: DISCONNECTED</span>
         </div>
         <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
-        <select id="week-selector" onchange="updateMatchupList()"></select>
-        <select id="match-selector" style="display:none;" onchange="loadSelectedMatch()"></select>
         <button id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
         <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
-        <div class="pay-input-group" style="margin-top: 6px;">
-            <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
-            <div style="display: flex; gap: 4px;">
-                <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag" style="flex: 1;">
-                <button onclick="savePayUrl()" style="padding: 6px 10px; font-weight: bold; background: var(--gold); color: black; border: none; border-radius: 6px; cursor: pointer;">Save</button>
+        
+        <div style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 8px;">
+            <div style="color: var(--gold); font-weight: bold; font-size: 0.85rem; margin-bottom: 8px; text-align: center;">Match Payment Calculator</div>
+            <div class="pay-input-group">
+                <label for="weekly-match-fee">Weekly Match Fee ($)</label>
+                <input type="number" id="weekly-match-fee" placeholder="0" oninput="calculateMatchOwed()">
             </div>
+            <div class="pay-input-group">
+                <label for="val-8bb">8BB Worth ($)</label>
+                <input type="number" id="val-8bb" placeholder="0" oninput="calculateMatchOwed()">
+            </div>
+            <div class="pay-input-group">
+                <label for="val-run">Run Worth ($)</label>
+                <input type="number" id="val-run" placeholder="0" oninput="calculateMatchOwed()">
+            </div>
+            <div class="pay-calc-result" style="margin-bottom: 12px;">
+                <div>Total Amount Owed:</div>
+                <span id="amount-owed-display">$0.00</span>
+            </div>
+        </div>
+
+        <div class="pay-input-group">
+            <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
+            <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag">
         </div>
         <div class="settings-btns">
             <button class="btn-load" onclick="saveSettings()">SAVE ALL</button>
-            <button class="btn-clear" onclick="clearSettings()">RESET</button>
+            <button class="btn-clear" onclick="clearSettings()">RESET ALL</button>
         </div>
     </div>
 </details>
@@ -330,12 +347,12 @@
 <main id="scoring-interface">
     <div class="team-banner">
         <div class="input-wrapper">
-            <input type="text" id="h-team" placeholder="Home Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'h-team')">
+            <input type="text" id="h-team" placeholder="Home Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'h-team')" onchange="saveMatchState()">
             <div id="h-team-menu" class="custom-dropdown"></div>
             <button class="voice-btn" onclick="if(!isMatchApproved()) startVoice('h-team')">🎤</button>
         </div>
         <div class="input-wrapper">
-            <input type="text" id="v-team" placeholder="Visiting Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'v-team')">
+            <input type="text" id="v-team" placeholder="Visiting Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'v-team')" onchange="saveMatchState()">
             <div id="v-team-menu" class="custom-dropdown"></div>
             <button class="voice-btn" onclick="if(!isMatchApproved()) startVoice('v-team')">🎤</button>
         </div>
@@ -343,7 +360,7 @@
     <div class="game-grid" id="grid"></div>
 </main>
 
-<footer class="app-footer">
+<footer class="app-footer" id="app-footer">
     <div class="score-chip"><span><span id="h-score">0</span></span></div>
     
     <button id="pay-now-btn" class="btn-pay-action" onclick="openPayLink()">
@@ -379,14 +396,13 @@
     let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
-        // Load saved payment URL
+        // Restore payment settings
         const savedPayUrl = localStorage.getItem('user_pay_url');
         if (savedPayUrl) {
             const payInput = document.getElementById('pay-url-input');
             if (payInput) payInput.value = savedPayUrl;
         }
 
-        // Load saved payment rates
         const savedMatchFee = localStorage.getItem('pay_match_fee');
         const savedVal8bb = localStorage.getItem('pay_val_8bb');
         const savedValRun = localStorage.getItem('pay_val_run');
@@ -395,50 +411,57 @@
         if (savedVal8bb !== null) document.getElementById('val-8bb').value = savedVal8bb;
         if (savedValRun !== null) document.getElementById('val-run').value = savedValRun;
 
-        // Load Roster and Stats URLs
         const savedRosterUrl = localStorage.getItem('user_sheet_url');
         const savedStatsUrl = localStorage.getItem('user_stats_url');
-        if (savedRosterUrl) fetchRosters(savedRosterUrl);
-        if (savedStatsUrl) updateStatsButton(savedStatsUrl);
+        if (savedRosterUrl) {
+            document.getElementById('sheet-url').value = savedRosterUrl;
+            fetchRosters(savedRosterUrl, false);
+        }
+        if (savedStatsUrl) {
+            document.getElementById('stats-url').value = savedStatsUrl;
+            updateStatsButton(savedStatsUrl);
+        }
+
+        // Restore active match progress if available
+        loadMatchState();
         
         draw();
         initSignaturePad();
         calculateMatchOwed();
     });
 
-    // Payment Link Helpers
-    function savePayUrl() {
-        const input = document.getElementById('pay-url-input');
-        const url = input ? input.value.trim() : '';
-        
-        if (!url) {
-            alert("Please enter a payment URL first.");
-            return;
+    function saveMatchState() {
+        const hTeam = document.getElementById('h-team').value;
+        const vTeam = document.getElementById('v-team').value;
+        localStorage.setItem('active_match_state', JSON.stringify({
+            hTeam: hTeam,
+            vTeam: vTeam,
+            state: state,
+            isApproved: isApproved
+        }));
+    }
+
+    function loadMatchState() {
+        const saved = localStorage.getItem('active_match_state');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed.hTeam !== undefined) document.getElementById('h-team').value = parsed.hTeam;
+                if (parsed.vTeam !== undefined) document.getElementById('v-team').value = parsed.vTeam;
+                if (parsed.state) state = parsed.state;
+                if (parsed.isApproved !== undefined) isApproved = parsed.isApproved;
+            } catch(e) { console.error("Could not load match state", e); }
         }
-        
-        localStorage.setItem('user_pay_url', url);
-        alert("Payment link saved!");
     }
 
     function openPayLink() {
         const savedUrl = localStorage.getItem('user_pay_url');
-        
         if (!savedUrl) {
             alert("No payment URL saved yet. Please expand SETUP to save your payment URL.");
             return;
         }
-        
         const validUrl = savedUrl.match(/^https?:\/\//i) ? savedUrl : 'https://' + savedUrl;
         window.open(validUrl, '_blank');
-    }
-
-    function togglePayModal() {
-        const modal = document.getElementById('pay-modal');
-        const isOpening = modal.style.display !== 'block';
-        modal.style.display = isOpening ? 'block' : 'none';
-        if (isOpening) {
-            calculateMatchOwed();
-        }
     }
 
     function calculateMatchOwed() {
@@ -446,7 +469,6 @@
         const val8bbInput = document.getElementById('val-8bb').value;
         const valRunInput = document.getElementById('val-run').value;
 
-        // Save fee rates to localStorage
         localStorage.setItem('pay_match_fee', matchFeeInput);
         localStorage.setItem('pay_val_8bb', val8bbInput);
         localStorage.setItem('pay_val_run', valRunInput);
@@ -583,7 +605,9 @@
         } else {
             visitingSignatureData = dataUrl;
             isApproved = true;
+            saveMatchState();
             closeSignatureModal();
+            draw();
             proceedToSendText();
         }
     }
@@ -630,8 +654,15 @@
     async function saveSettings() {
         const rUrl = document.getElementById('sheet-url').value.trim();
         const sUrl = document.getElementById('stats-url').value.trim();
-        if (rUrl) { localStorage.setItem('user_sheet_url', rUrl); await fetchRosters(rUrl); }
+        const pUrl = document.getElementById('pay-url-input').value.trim();
+
+        if (rUrl) { 
+            localStorage.setItem('user_sheet_url', rUrl); 
+            await fetchRosters(rUrl, true); 
+        }
         if (sUrl) { localStorage.setItem('user_stats_url', sUrl); updateStatsButton(sUrl); }
+        if (pUrl) { localStorage.setItem('user_pay_url', pUrl); }
+
         document.getElementById('setup-panel').open = false;
     }
 
@@ -643,16 +674,16 @@
         else { led.classList.add('error'); txt.innerText = "DATA: ERROR"; txt.style.color = "var(--status-err)"; }
     }
 
-    async function fetchRosters(url) {
+    async function fetchRosters(url, showPopup = false) {
         try {
             let fetchUrl = url.includes('/edit') ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
             const response = await fetch(fetchUrl + (fetchUrl.includes('?') ? '&' : '?') + 'cb=' + new Date().getTime());
             const data = await response.text();
-            parseCSV(data);
+            parseCSV(data, showPopup);
         } catch (err) { setStatus('error'); }
     }
 
-    function parseCSV(csvText) {
+    function parseCSV(csvText, showPopup = false) {
         const lines = csvText.split(/\r?\n/);
         const newRosters = {};
         const newSchedule = [];
@@ -671,12 +702,27 @@
         });
         MASTER_ROSTERS = newRosters;
         MASTER_SCHEDULE = newSchedule;
-        populateDateSelector(today);
-        setStatus(Object.keys(MASTER_ROSTERS).length > 0 ? 'success' : 'error');
+        
+        const hasData = Object.keys(MASTER_ROSTERS).length > 0;
+        setStatus(hasData ? 'success' : 'error');
+        
+        if (hasData && showPopup) {
+            openMatchPickerModal();
+        }
     }
 
-    function populateDateSelector(today) {
-        const selector = document.getElementById('week-selector');
+    function openMatchPickerModal() {
+        const today = new Date().toISOString().split('T')[0];
+        populatePopupDateSelector(today);
+        document.getElementById('match-picker-modal').style.display = 'block';
+    }
+
+    function closeMatchPickerModal() {
+        document.getElementById('match-picker-modal').style.display = 'none';
+    }
+
+    function populatePopupDateSelector(today) {
+        const selector = document.getElementById('popup-week-selector');
         const dates = [...new Set(MASTER_SCHEDULE.map(s => s.date))].sort();
         selector.innerHTML = '<option value="">-- Choose a Date --</option>';
         dates.forEach(d => {
@@ -685,14 +731,14 @@
             opt.innerText = d + (d === today ? ' (TODAY)' : '');
             selector.appendChild(opt);
         });
-        if (dates.includes(today)) { selector.value = today; updateMatchupList(); }
+        if (dates.includes(today)) { selector.value = today; }
+        updatePopupMatchupList();
     }
 
-    function updateMatchupList() {
-        const date = document.getElementById('week-selector').value;
-        const ms = document.getElementById('match-selector');
-        const cb = document.getElementById('clear-match-btn');
-        if (!date) { ms.style.display = cb.style.display = 'none'; return; }
+    function updatePopupMatchupList() {
+        const date = document.getElementById('popup-week-selector').value;
+        const ms = document.getElementById('popup-match-selector');
+        if (!date) { ms.innerHTML = '<option value="">-- Choose Date First --</option>'; return; }
         const matches = MASTER_SCHEDULE.filter(s => s.date === date);
         ms.innerHTML = '<option value="">-- Select Your Game --</option>';
         matches.forEach((m, idx) => {
@@ -701,29 +747,36 @@
             opt.innerText = `${m.home} vs ${m.visit}`;
             ms.appendChild(opt);
         });
-        ms.style.display = cb.style.display = 'block';
     }
 
-    function loadSelectedMatch() {
-        if (isMatchApproved()) return;
-        const date = document.getElementById('week-selector').value;
-        const matchIdx = document.getElementById('match-selector').value;
-        if (date === "" || matchIdx === "") return;
+    function applyPopupMatchSelection() {
+        if (isMatchApproved()) {
+            closeMatchPickerModal();
+            return;
+        }
+        const date = document.getElementById('popup-week-selector').value;
+        const matchIdx = document.getElementById('popup-match-selector').value;
+        if (!date || matchIdx === "") {
+            alert("Please select both a date and a match.");
+            return;
+        }
         const selected = MASTER_SCHEDULE.filter(s => s.date === date)[matchIdx];
         if (selected) {
             document.getElementById('h-team').value = selected.home;
             document.getElementById('v-team').value = selected.visit;
+            document.getElementById('clear-match-btn').style.display = 'block';
+            saveMatchState();
             draw();
         }
+        closeMatchPickerModal();
     }
 
     function clearSelectedMatch() {
         if (isMatchApproved()) return;
-        document.getElementById('week-selector').value = "";
-        document.getElementById('match-selector').value = "";
         document.getElementById('h-team').value = "";
         document.getElementById('v-team').value = "";
-        updateMatchupList();
+        document.getElementById('clear-match-btn').style.display = 'none';
+        saveMatchState();
         draw();
     }
 
@@ -762,20 +815,30 @@
         input.oninput = (e) => { 
             if(idx !== null) { 
                 state[idx][side] = e.target.value; 
-                state[idx][side + 'Manual'] = true; 
-            } 
+                state[idx][side + 'Manual'] = true;
+                saveMatchState();
+            } else {
+                saveMatchState();
+            }
         };
         input.onblur = () => { input.readOnly = true; };
         closeAllDropdowns();
     }
 
-    function selectValue(id, val) { document.getElementById(id).value = val; closeAllDropdowns(); }
+    function selectValue(id, val) { 
+        document.getElementById(id).value = val; 
+        saveMatchState();
+        closeAllDropdowns(); 
+    }
+    
     function selectPlayer(side, idx, val) { 
         if (isMatchApproved()) return;
         state[idx][side] = val; 
         state[idx][side + 'Manual'] = false;
+        saveMatchState();
         draw(); 
     }
+
     function closeAllDropdowns() { document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none'); }
 
     function draw() {
@@ -810,6 +873,21 @@
         `).join('');
         document.getElementById('h-score').innerText = state.filter(g => g.win === 'h').length;
         document.getElementById('v-score').innerText = state.filter(g => g.win === 'v').length;
+
+        // Apply visual lock & grey-out based on match approval state
+        const scoringArea = document.getElementById('scoring-interface');
+        const footerArea = document.getElementById('app-footer');
+        const setupPanel = document.getElementById('setup-panel');
+        
+        if (isApproved) {
+            scoringArea.classList.add('locked');
+            footerArea.classList.add('locked');
+            setupPanel.classList.add('locked');
+        } else {
+            scoringArea.classList.remove('locked');
+            footerArea.classList.remove('locked');
+            setupPanel.classList.remove('locked');
+        }
         
         calculateMatchOwed();
     }
@@ -819,38 +897,51 @@
         const g = state[gameId - 1];
         const active = g[clickedKey];
         
-        // Clear all markers across both players
         g.hTR = g.h8B = g.vTR = g.v8B = false;
         
         if (!active) {
             g[clickedKey] = true;
-            
-            // Auto-trigger the win for the corresponding player
             if (clickedKey === 'hTR' || clickedKey === 'h8B') {
                 g.win = 'h';
             } else if (clickedKey === 'vTR' || clickedKey === 'v8B') {
                 g.win = 'v';
             }
         } else {
-            // Reset win state if marker is toggled OFF
             g.win = null;
         }
         
+        saveMatchState();
         draw();
     }
 
     function cycleWin(id) {
         if (isMatchApproved()) return;
-        const g = state[id-1];
+        const g = state[id - 1];
+        
+        // Cycle win: null -> 'h' -> 'v' -> null
         g.win = g.win === null ? 'h' : (g.win === 'h' ? 'v' : null);
+
+        // Turn off markers if the winner does not match the player who has the active marker
+        if ((g.hTR || g.h8B) && g.win !== 'h') {
+            g.hTR = g.h8B = false;
+        }
+        if ((g.vTR || g.v8B) && g.win !== 'v') {
+            g.vTR = g.v8B = false;
+        }
+
+        saveMatchState();
         draw();
     }
 
     function resetBoard() {
-        if (isMatchApproved()) { alert("Match is approved, signed, and locked."); return; }
-        if(confirm("Reset entire score sheet?")) {
+        if(confirm("Unlock match and reset entire score sheet data?")) {
+            isApproved = false;
+            homeSignatureData = null;
+            visitingSignatureData = null;
             state.forEach(g => { g.h=""; g.v=""; g.hTR=g.h8B=g.vTR=g.v8B=false; g.win=null; g.hManual=false; g.vManual=false; });
-            document.getElementById('h-team').value = ""; document.getElementById('v-team').value = "";
+            document.getElementById('h-team').value = ""; 
+            document.getElementById('v-team').value = "";
+            localStorage.removeItem('active_match_state');
             draw();
         }
     }
@@ -870,6 +961,7 @@
                 state[idx][side] = val;
                 state[idx][side + 'Manual'] = true;
             }
+            saveMatchState();
             draw();
         };
         recognition.start();
@@ -878,7 +970,7 @@
     function buildMessage() {
         const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
         const vT = (document.getElementById('v-team').value || "Visit").toUpperCase();
-        let msg = `8-BALL CASH LEAGUE\n[HT] ${hT} (${document.getElementById('h-score').innerText})\n[VT] ${vT} (${document.getElementById('v-score').innerText})\n\n`;
+        let msg = `8 BALL 18 GAMES\n[HT] ${hT} (${document.getElementById('h-score').innerText})\n[VT] ${vT} (${document.getElementById('v-score').innerText})\n\n`;
         state.forEach(g => {
             if (g.h || g.v || g.win) {
                 const hName = (g.h || "P") + (g.hManual ? ' (NP)' : '');
@@ -896,7 +988,13 @@
     }
 
     function updateStatsButton(url) { const btn = document.getElementById('view-stats'); if (url) { btn.href = url; btn.style.display = 'block'; } }
-    function clearSettings() { if(confirm("Clear settings?")) { localStorage.clear(); location.reload(); } }
+    
+    function clearSettings() { 
+        if(confirm("Clear all settings and score data?")) { 
+            localStorage.clear(); 
+            location.reload(); 
+        } 
+    }
 </script>
 </body>
 </html>
