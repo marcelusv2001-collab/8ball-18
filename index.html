@@ -71,27 +71,38 @@
         }
 
         .pay-input-group {
-            display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;
+            display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;
         }
         .pay-input-group label {
-            font-size: 0.8rem; color: var(--gold); font-weight: bold;
+            font-size: 0.75rem; color: var(--gold); font-weight: bold;
         }
         .pay-input-group input {
-            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white; font-size: 0.9rem;
+            width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white; font-size: 0.85rem;
         }
         .pay-calc-result {
-            background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-top: 15px; text-align: center;
+            background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px; margin-top: 8px; text-align: center;
         }
-        .pay-calc-result div { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px; }
-        .pay-calc-result span { font-size: 1.5rem; font-weight: 900; color: #22c55e; }
+        .pay-calc-result div { font-size: 0.75rem; color: #cbd5e1; margin-bottom: 2px; }
+        .pay-calc-result span { font-size: 1.25rem; font-weight: 900; color: #22c55e; }
 
-        details { background: #1e293b; border-bottom: 1px solid var(--gold); z-index: 100; }
+        details { background: #1e293b; border-bottom: 1px solid var(--gold); z-index: 100; flex-shrink: 0; }
         summary { color: var(--gold); font-size: 0.75rem; cursor: pointer; padding: 8px 10px; font-weight: bold; list-style: none; text-align: center; }
-        .settings-content { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        
+        /* Updated settings-content to stay within viewport height */
+        .settings-content {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 65vh;
+            max-height: 65dvh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
 
         .status-container {
             display: flex; align-items: center; justify-content: center; gap: 10px;
-            background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155;
+            background: #0f172a; padding: 8px; border-radius: 8px; border: 1px solid #334155;
         }
         .led-light {
             width: 12px; height: 12px; border-radius: 50%;
@@ -106,13 +117,13 @@
         #status-text { font-size: 0.7rem; font-weight: bold; color: #94a3b8; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
-        .settings-content input, .settings-content select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white; font-size: 0.8rem; }
-        .settings-btns { display: flex; gap: 8px; }
+        .settings-content input, .settings-content select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white; font-size: 0.8rem; }
+        .settings-btns { display: flex; gap: 8px; padding-bottom: 4px; }
         .btn-load { flex: 1; background: var(--gold); border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .btn-clear { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-        .btn-clear-match { background: #475569; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; width: 100%; margin-top: 5px; }
+        .btn-clear-match { background: #475569; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; width: 100%; margin-top: 2px; }
 
-        #scoring-interface { flex: 1; overflow-y: auto; padding: 6px; background: var(--bg); position: relative; transition: filter 0.3s ease, opacity 0.3s ease; }
+        #scoring-interface { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; background: var(--bg); position: relative; transition: filter 0.3s ease, opacity 0.3s ease; }
         .team-banner { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
         .input-wrapper { position: relative; display: flex; align-items: center; background: var(--slate); border-radius: 8px; padding-right: 4px; border: 1px solid #334155; }
         .input-wrapper input { width: 100%; background: transparent; border: none; color: white; padding: 12px; font-size: 0.9rem; outline: none; font-weight: bold; cursor: pointer; }
@@ -238,7 +249,6 @@
         .btn-sig-clear { background: #475569; color: white; }
         .btn-sig-confirm { background: var(--gold); color: black; }
 
-        /* Locked state styles */
         .locked {
             filter: grayscale(100%);
             opacity: 0.6;
@@ -313,8 +323,8 @@
         <button id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
         <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
         
-        <div style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 8px;">
-            <div style="color: var(--gold); font-weight: bold; font-size: 0.85rem; margin-bottom: 8px; text-align: center;">Match Payment Calculator</div>
+        <div style="border-top: 1px solid #334155; margin-top: 4px; padding-top: 6px;">
+            <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">Match Payment Calculator</div>
             <div class="pay-input-group">
                 <label for="weekly-match-fee">Weekly Match Fee ($)</label>
                 <input type="number" id="weekly-match-fee" placeholder="0" oninput="calculateMatchOwed()">
@@ -327,7 +337,7 @@
                 <label for="val-run">Run Worth ($)</label>
                 <input type="number" id="val-run" placeholder="0" oninput="calculateMatchOwed()">
             </div>
-            <div class="pay-calc-result" style="margin-bottom: 12px;">
+            <div class="pay-calc-result" style="margin-bottom: 8px;">
                 <div>Total Amount Owed:</div>
                 <span id="amount-owed-display">$0.00</span>
             </div>
@@ -396,7 +406,6 @@
     let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
-        // Restore payment settings
         const savedPayUrl = localStorage.getItem('user_pay_url');
         if (savedPayUrl) {
             const payInput = document.getElementById('pay-url-input');
@@ -422,7 +431,6 @@
             updateStatsButton(savedStatsUrl);
         }
 
-        // Restore active match progress if available
         loadMatchState();
         
         draw();
@@ -874,7 +882,6 @@
         document.getElementById('h-score').innerText = state.filter(g => g.win === 'h').length;
         document.getElementById('v-score').innerText = state.filter(g => g.win === 'v').length;
 
-        // Apply visual lock & grey-out based on match approval state
         const scoringArea = document.getElementById('scoring-interface');
         const footerArea = document.getElementById('app-footer');
         const setupPanel = document.getElementById('setup-panel');
@@ -918,10 +925,8 @@
         if (isMatchApproved()) return;
         const g = state[id - 1];
         
-        // Cycle win: null -> 'h' -> 'v' -> null
         g.win = g.win === null ? 'h' : (g.win === 'h' ? 'v' : null);
 
-        // Turn off markers if the winner does not match the player who has the active marker
         if ((g.hTR || g.h8B) && g.win !== 'h') {
             g.hTR = g.h8B = false;
         }
