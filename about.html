@@ -1,11 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Us</title>
+    <style>
+        :root {
+            --primary-color: #0f172a;
+            --text-color: #334155;
+            --heading-color: #0f172a;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --accent-color: #2563eb;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1.125rem; /* 18px base text size */
+            line-height: 1.7;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 3rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2.5rem; /* 40px */
+            font-weight: 800;
+            color: var(--heading-color);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            letter-spacing: -0.025em;
+        }
+
+        p {
+            margin-bottom: 1.25rem;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                font-size: 1rem;
+                padding: 1rem 0.5rem;
+            }
+            .container {
+                padding: 1.5rem 1.25rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>About Us</h1>
-    <p>Welcome to our suite of billiard applications!</p>
-    <p>We are dedicated to enhancing the pool community by providing intuitive tools for league management, tournament organization, and seamless scorekeeping. Our goal is to streamline your billiards experience, whether you are a league operator, tournament director, or a passionate player.</p>
+    <div class="container">
+        <h1>About Us</h1>
+        <p>Welcome to our suite of billiard applications!</p>
+        <p>We are dedicated to enhancing the pool community by providing intuitive tools for league management, tournament organization, and seamless scorekeeping. Our goal is to streamline your billiards experience, whether you are a league operator, tournament director, or a passionate player.</p>
+    </div>
 </body>
 </html>
