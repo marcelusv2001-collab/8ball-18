@@ -269,6 +269,29 @@
             opacity: 0.6;
             pointer-events: none;
         }
+
+        /* Keeps Pay and Resend Data buttons active, colorful, and clickable when locked */
+        .app-footer.locked #pay-now-btn,
+        .app-footer.locked #resend-btn {
+            filter: none;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .btn-resend {
+            background: #22c55e;
+            color: black;
+            border: none;
+            padding: 8px 4px;
+            border-radius: 6px;
+            font-weight: 900;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            height: 38px;
+            white-space: nowrap;
+        }
+
     </style>
 </head>
 <body onclick="closeAllDropdowns(event)">
@@ -393,10 +416,12 @@
         💵 Pay (<span id="pay-btn-amount">$0.00</span>)
     </button>
     
-    <button class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
+    <button id="submit-btn" class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
+    <button id="resend-btn" class="btn-resend" style="display: none;" onclick="proceedToSendText()">📲 Resend Data</button>
     
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
 </footer>
+
 
 <footer class="site-footer">
   <p>&copy; 2026 MVP TV. All rights reserved.</p>
@@ -865,7 +890,7 @@
 
     function closeAllDropdowns() { document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none'); }
 
-    function draw() {
+        function draw() {
         const grid = document.getElementById('grid');
         grid.innerHTML = state.map((g, i) => `
             <div class="game-row">
@@ -901,19 +926,26 @@
         const scoringArea = document.getElementById('scoring-interface');
         const footerArea = document.getElementById('app-footer');
         const setupPanel = document.getElementById('setup-panel');
+        const submitBtn = document.getElementById('submit-btn');
+        const resendBtn = document.getElementById('resend-btn');
         
         if (isApproved) {
             scoringArea.classList.add('locked');
             footerArea.classList.add('locked');
             setupPanel.classList.add('locked');
+            if (submitBtn) submitBtn.style.display = 'none';
+            if (resendBtn) resendBtn.style.display = 'block';
         } else {
             scoringArea.classList.remove('locked');
             footerArea.classList.remove('locked');
             setupPanel.classList.remove('locked');
+            if (submitBtn) submitBtn.style.display = 'block';
+            if (resendBtn) resendBtn.style.display = 'none';
         }
         
         calculateMatchOwed();
     }
+
 
     function setExclusiveMarker(gameId, clickedKey) {
         if (isMatchApproved()) return;
