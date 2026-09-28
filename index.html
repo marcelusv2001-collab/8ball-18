@@ -36,6 +36,18 @@
         .header-btns { display: flex; gap: 15px; align-items: center; }
         .reset-btn, .help-trigger { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; margin: 0; }
         .reset-btn { position: relative; z-index: 1001; pointer-events: auto !important; }
+        .start-btn {
+    background: var(--gold);
+    color: black;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
         .help-trigger { font-size: 1.4rem; color: var(--gold); }
         .stats-link-btn { background: var(--gold); color: black; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-decoration: none; display: none; }
 
@@ -309,6 +321,7 @@
 <header id="app-header">
     <div class="header-btns">
         <button class="reset-btn" onclick="resetBoard()">🗑️</button>
+        <button class="start-btn" onclick="saveSettings()">START</button>
         <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
     </div>
     <h1>8 Ball 18 Games</h1>
