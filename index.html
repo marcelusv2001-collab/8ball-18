@@ -264,21 +264,13 @@
         .btn-sig-clear { background: #475569; color: white; }
         .btn-sig-confirm { background: var(--gold); color: black; }
 
-        .locked {
-            filter: grayscale(100%);
-            opacity: 0.6;
-            pointer-events: none;
-        }
+        #scoring-interface.locked,
+#setup-panel.locked {
+    filter: grayscale(100%);
+    opacity: 0.6;
+    pointer-events: none;
+}
 
-        /* Keeps Pay and Resend Data buttons active, colorful, and clickable when locked */
-        .app-footer.locked #pay-now-btn,
-.app-footer.locked #submit-btn,
-.app-footer.locked #resend-btn {
-
-            filter: none;
-            opacity: 1;
-            pointer-events: auto;
-        }
 
         .btn-resend {
             background: #22c55e;
