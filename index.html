@@ -713,7 +713,8 @@
         const led = document.getElementById('led');
         const txt = document.getElementById('status-text');
         led.className = 'led-light'; 
-        if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: ACTIVE"; txt.style.color = "var(--status-on)"; }
+if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYNCED " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); txt.style.color = "var(--status-ok)"; }
+
         else { led.classList.add('error'); txt.innerText = "DATA: ERROR"; txt.style.color = "var(--status-err)"; }
     }
 
