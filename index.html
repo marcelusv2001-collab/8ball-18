@@ -345,7 +345,7 @@
     <button class="help-trigger" onclick="toggleHelp()">❓</button>
 </header>
 
-<details id="setup-panel">
+<details id="setup-panel" ontoggle="if(this.open) { if(!confirm('Are You Sure You Want To Enter The Setup MENU?')) { this.open = false; } }">
     <summary>⚙️ SETUP: CONFIG & STATS</summary>
     <div class="settings-content">
         <div class="status-container">
@@ -355,7 +355,10 @@
         <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
         <button id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
         <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
-        
+        <div class="pay-input-group">
+            <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
+            <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag">
+        </div>
         <div style="border-top: 1px solid #334155; margin-top: 4px; padding-top: 6px;">
             <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">Match Payment Calculator</div>
             <div class="pay-input-group">
@@ -375,11 +378,7 @@
                 <span id="amount-owed-display">$0.00</span>
             </div>
         </div>
-
-        <div class="pay-input-group">
-            <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
-            <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag">
-        </div>
+        
         <div class="settings-btns">
             <button class="btn-load" onclick="saveSettings()">SAVE ALL</button>
             <button class="btn-clear" onclick="clearSettings()">RESET ALL</button>
