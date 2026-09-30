@@ -942,9 +942,13 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
     }
 
 
-    function setExclusiveMarker(gameId, clickedKey) {
+        function setExclusiveMarker(gameId, clickedKey) {
         if (isMatchApproved()) return;
         const g = state[gameId - 1];
+        if (!g.h && !g.v) {
+            alert("Please select your players before choosing");
+            return;
+        }
         const active = g[clickedKey];
         
         g.hTR = g.h8B = g.vTR = g.v8B = false;
@@ -967,6 +971,10 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
     function cycleWin(id) {
         if (isMatchApproved()) return;
         const g = state[id - 1];
+        if (!g.h && !g.v) {
+            alert("Please select your players before choosing");
+            return;
+        }
         
         g.win = g.win === null ? 'h' : (g.win === 'h' ? 'v' : null);
 
