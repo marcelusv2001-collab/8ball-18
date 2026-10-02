@@ -37,16 +37,16 @@
         .reset-btn, .help-trigger { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; margin: 0; }
         .reset-btn { position: relative; z-index: 1001; pointer-events: auto !important; }
         .start-btn {
-    background: green;
-    color: black;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    cursor: pointer;
-    text-transform: uppercase;
-}
+            background: green;
+            color: black;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
 
         .help-trigger { font-size: 1.4rem; color: var(--gold); }
         .stats-link-btn { background: var(--gold); color: black; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-decoration: none; display: none; }
@@ -103,7 +103,6 @@
         details { background: #1e293b; border-bottom: 1px solid var(--gold); z-index: 100; flex-shrink: 0; }
         summary { color: var(--gold); font-size: 0.75rem; cursor: pointer; padding: 8px 10px; font-weight: bold; list-style: none; text-align: center; }
         
-        /* Updated settings-content to stay within viewport height */
         .settings-content {
             padding: 10px;
             display: flex;
@@ -265,12 +264,11 @@
         .btn-sig-confirm { background: var(--gold); color: black; }
 
         #scoring-interface.locked,
-#setup-panel.locked {
-    filter: grayscale(100%);
-    opacity: 0.6;
-    pointer-events: none;
-}
-
+        #setup-panel.locked {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            pointer-events: none;
+        }
 
         .btn-resend {
             background: #22c55e;
@@ -285,7 +283,6 @@
             height: 38px;
             white-space: nowrap;
         }
-
     </style>
 </head>
 <body onclick="closeAllDropdowns(event)">
@@ -296,7 +293,7 @@
         <p>1. <b>SETUP:</b> Connect your roster data.</p>
         <p>2. <b>SCORING:</b> Tap 'W' to cycle wins. Home = <b>White Border</b>, Visit = <b>Red Border</b>.</p>
         <p>3. <b>DATA:</b> Manual player entries and match progress are saved automatically.</p>
-        <button class="help-close" onclick="toggleHelp()">GOT IT!</button>
+        <button type="button" class="help-close" onclick="toggleHelp()">GOT IT!</button>
     </div>
 </div>
 
@@ -313,8 +310,8 @@
             <select id="popup-match-selector"></select>
         </div>
         <div class="modal-btn-row">
-            <button class="modal-btn btn-modal-cancel" onclick="closeMatchPickerModal()">Cancel (Use App Manually)</button>
-            <button class="modal-btn btn-modal-apply" onclick="applyPopupMatchSelection()">Load Selected Match</button>
+            <button type="button" class="modal-btn btn-modal-cancel" onclick="closeMatchPickerModal()">Cancel (Use App Manually)</button>
+            <button type="button" class="modal-btn btn-modal-apply" onclick="applyPopupMatchSelection()">Load Selected Match</button>
         </div>
     </div>
 </div>
@@ -323,37 +320,37 @@
     <div class="sig-content">
         <div class="sig-header-row">
             <h3 id="sig-title">Home Captain Signature</h3>
-            <button class="sig-close-btn" onclick="closeSignatureModal()">✕</button>
+            <button type="button" class="sig-close-btn" onclick="closeSignatureModal()">✕</button>
         </div>
         <div class="sig-pad-wrapper">
             <canvas id="sig-canvas" class="sig-canvas"></canvas>
         </div>
         <div class="sig-btns">
-            <button class="btn-sig-action btn-sig-clear" onclick="clearSignature()">Clear</button>
-            <button class="btn-sig-action btn-sig-confirm" onclick="confirmSignature()">Accept & Continue</button>
+            <button type="button" class="btn-sig-action btn-sig-clear" onclick="clearSignature()">Clear</button>
+            <button type="button" class="btn-sig-action btn-sig-confirm" onclick="confirmSignature()">Accept & Continue</button>
         </div>
     </div>
 </div>
 
 <header id="app-header">
     <div class="header-btns">
-        <button class="reset-btn" onclick="resetBoard()">🗑️</button>
-        <button class="start-btn" onclick="saveSettings()">START</button>
+        <button type="button" class="reset-btn" onclick="resetBoard()">🗑️</button>
+        <button type="button" class="start-btn" onclick="saveSettings()">START</button>
         <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
     </div>
     <h1>8 Ball 18 Games</h1>
-    <button class="help-trigger" onclick="toggleHelp()">❓</button>
+    <button type="button" class="help-trigger" onclick="toggleHelp()">❓</button>
 </header>
 
-<details id="setup-panel" ontoggle="if(this.open) { if(!confirm('Are You Sure You Want To Enter The Setup MENU?')) { this.open = false; } }">
-    <summary>⚙️ SETUP: CONFIG & STATS</summary>
+<details id="setup-panel">
+    <summary onclick="handleSetupToggle(event)">⚙️ SETUP: CONFIG & STATS</summary>
     <div class="settings-content">
         <div class="status-container">
             <div id="led" class="led-light"></div>
             <span id="status-text">ROSTER: DISCONNECTED</span>
         </div>
         <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
-        <button id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
+        <button type="button" id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
         <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
         <div class="pay-input-group">
             <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
@@ -380,8 +377,8 @@
         </div>
         
         <div class="settings-btns">
-            <button class="btn-load" onclick="saveSettings()">SAVE ALL</button>
-            <button class="btn-clear" onclick="clearSettings()">RESET ALL</button>
+            <button type="button" class="btn-load" onclick="saveSettings()">SAVE ALL</button>
+            <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
         </div>
     </div>
 </details>
@@ -391,12 +388,12 @@
         <div class="input-wrapper">
             <input type="text" id="h-team" placeholder="Home Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'h-team')" onchange="saveMatchState()">
             <div id="h-team-menu" class="custom-dropdown"></div>
-            <button class="voice-btn" onclick="if(!isMatchApproved()) startVoice('h-team')">🎤</button>
+            <button type="button" class="voice-btn" onclick="if(!isMatchApproved()) startVoice('h-team')">🎤</button>
         </div>
         <div class="input-wrapper">
             <input type="text" id="v-team" placeholder="Visiting Team" readonly onclick="if(!isMatchApproved()) showTeamDropdown(event, 'v-team')" onchange="saveMatchState()">
             <div id="v-team-menu" class="custom-dropdown"></div>
-            <button class="voice-btn" onclick="if(!isMatchApproved()) startVoice('v-team')">🎤</button>
+            <button type="button" class="voice-btn" onclick="if(!isMatchApproved()) startVoice('v-team')">🎤</button>
         </div>
     </div>
     <div class="game-grid" id="grid"></div>
@@ -405,16 +402,15 @@
 <footer class="app-footer" id="app-footer">
     <div class="score-chip"><span><span id="h-score">0</span></span></div>
     
-    <button id="pay-now-btn" class="btn-pay-action" onclick="openPayLink()">
+    <button type="button" id="pay-now-btn" class="btn-pay-action" onclick="openPayLink()">
         💵 Pay (<span id="pay-btn-amount">$0.00</span>)
     </button>
     
-    <button id="submit-btn" class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
-    <button id="resend-btn" class="btn-resend" style="display: none;" onclick="proceedToSendText()">📲 Resend Data</button>
+    <button type="button" id="submit-btn" class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
+    <button type="button" id="resend-btn" class="btn-resend" style="display: none;" onclick="proceedToSendText()">📲 Resend Data</button>
     
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
 </footer>
-
 
 <footer class="site-footer">
   <p>&copy; 2026 MVP TV. All rights reserved.</p>
@@ -466,11 +462,19 @@
         }
 
         loadMatchState();
-        
         draw();
         initSignaturePad();
         calculateMatchOwed();
     });
+
+    function handleSetupToggle(event) {
+        const panel = document.getElementById('setup-panel');
+        if (!panel.open) {
+            if (!confirm('Are You Sure You Want To Enter The Setup MENU?')) {
+                event.preventDefault();
+            }
+        }
+    }
 
     function saveMatchState() {
         const hTeam = document.getElementById('h-team').value;
@@ -656,7 +660,6 @@
 
     function proceedToSendText() {
         const msg = buildMessage();
-        
         let shareData = { text: msg };
         
         if (navigator.canShare && homeSignatureData && visitingSignatureData) {
@@ -712,9 +715,15 @@
         const led = document.getElementById('led');
         const txt = document.getElementById('status-text');
         led.className = 'led-light'; 
-if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYNCED " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); txt.style.color = "var(--status-ok)"; }
-
-        else { led.classList.add('error'); txt.innerText = "DATA: ERROR"; txt.style.color = "var(--status-err)"; }
+        if(type === 'success') { 
+            led.classList.add('active'); 
+            txt.innerText = "DATA: SYNCED " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+            txt.style.color = "var(--status-ok)"; 
+        } else { 
+            led.classList.add('error'); 
+            txt.innerText = "DATA: ERROR"; 
+            txt.style.color = "var(--status-err)"; 
+        }
     }
 
     async function fetchRosters(url, showPopup = false) {
@@ -733,7 +742,7 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
         const today = new Date().toISOString().split('T')[0];
         lines.forEach((line, index) => {
             if (index === 0 || !line.trim()) return; 
-            const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/^"|"$/g, '').trim());
+            const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/^"\vert{}"$/g, '').trim());
             const rowType = parts[0]?.toUpperCase();
             if (rowType === "ROSTER") {
                 const team = parts[1].toUpperCase();
@@ -884,7 +893,7 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
 
     function closeAllDropdowns() { document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none'); }
 
-        function draw() {
+    function draw() {
         const grid = document.getElementById('grid');
         grid.innerHTML = state.map((g, i) => `
             <div class="game-row">
@@ -893,7 +902,7 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
                     <div class="p-input-wrap">
                         <input type="text" id="h-in-${g.id}" placeholder="Home" value="${g.h}" readonly onclick="showPlayerDropdown(event, 'h', ${i})">
                         <div id="h-menu-${i}" class="custom-dropdown"></div>
-                        <button class="voice-btn" style="font-size:0.8rem" onclick="startVoice('h-in-${g.id}', ${i}, 'h')">🎤</button>
+                        <button type="button" class="voice-btn" style="font-size:0.8rem" onclick="startVoice('h-in-${g.id}', ${i}, 'h')">🎤</button>
                     </div>
                     <div class="markers">
                         <span class="marker ${g.hTR?'on':''}" onclick="setExclusiveMarker(${g.id}, 'hTR')">Run</span>
@@ -904,7 +913,7 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
                     <div class="p-input-wrap">
                         <input type="text" id="v-in-${g.id}" placeholder="Visit" value="${g.v}" readonly onclick="showPlayerDropdown(event, 'v', ${i})">
                         <div id="v-menu-${i}" class="custom-dropdown"></div>
-                        <button class="voice-btn" style="font-size:0.8rem" onclick="startVoice('v-in-${g.id}', ${i}, 'v')">🎤</button>
+                        <button type="button" class="voice-btn" style="font-size:0.8rem" onclick="startVoice('v-in-${g.id}', ${i}, 'v')">🎤</button>
                     </div>
                     <div class="markers">
                         <span class="marker ${g.vTR?'on':''}" onclick="setExclusiveMarker(${g.id}, 'vTR')">Run</span>
@@ -940,8 +949,7 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
         calculateMatchOwed();
     }
 
-
-        function setExclusiveMarker(gameId, clickedKey) {
+    function setExclusiveMarker(gameId, clickedKey) {
         if (isMatchApproved()) return;
         const g = state[gameId - 1];
         if (!g.h && !g.v) {
@@ -1042,7 +1050,10 @@ if(type === 'success') { led.classList.add('active'); txt.innerText = "DATA: SYN
         return isApproved;
     }
 
-    function updateStatsButton(url) { const btn = document.getElementById('view-stats'); if (url) { btn.href = url; btn.style.display = 'block'; } }
+    function updateStatsButton(url) { 
+        const btn = document.getElementById('view-stats'); 
+        if (url) { btn.href = url; btn.style.display = 'block'; } 
+    }
     
     function clearSettings() { 
         if(confirm("Clear all settings and score data?")) { 
