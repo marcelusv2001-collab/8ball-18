@@ -673,49 +673,40 @@
         }
     }
 
-   async function proceedToSendText() {
-    const msg = buildMessage();
-    const webhookUrl = localStorage.getItem('league_webhook_url') || document.getElementById('sheet-webhook-url')?.value;
+    async function proceedToSendText() {
+        const msg = buildMessage();
+        const webhookUrl = localStorage.getItem('league_webhook_url');
 
-    if (!webhookUrl) {
-        window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
-        return;
-    }
-
-    const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) submitBtn.innerText = 'SENDING...';
-
-    const payloadData = {
-        payload: msg,
-        homeSig: homeSignatureData || '',
-        visitSig: visitingSignatureData || ''
-    };
-
-    try {
-       await fetch(webhookUrl, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify(payloadData) // Send payload directly
-});
-
-        alert('Match successfully submitted to the admin queue!');
-        if (submitBtn) {
-            submitBtn.innerText = 'Submitted Successfully';
-            submitBtn.disabled = true;
+        if (!webhookUrl) {
+            window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
+            return;
         }
-    } catch (err) {
-        alert('Error sending match to backend: ' + err.message);
-        if (submitBtn) submitBtn.innerText = 'Submit Match';
-    }
-}
 
-    function dataURLtoFile(dataurl, filename) {
-        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) submitBtn.innerText = 'SENDING...';
+
+        const payloadData = {
+            payload: msg,
+            homeSig: homeSignatureData || '',
+            visitSig: visitingSignatureData || ''
+        };
+
+        try {
+            await fetch(webhookUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(payloadData)
+            });
+
+            alert('Match successfully submitted to the admin queue!');
+            if (submitBtn) {
+                submitBtn.innerText = 'Submitted Successfully';
+                submitBtn.disabled = true;
+            }
+        } catch (err) {
+            alert('Error sending match to backend: ' + err.message);
+            if (submitBtn) submitBtn.innerText = 'Submit Match';
         }
-        return new File([u8arr], filename, {type:mime});
     }
 
     function toggleHelp() {
@@ -761,64 +752,60 @@
             parseCSV(data, showPopup);
         } catch (err) { setStatus('error'); }
     }
-async function fetchLeagueConfig() {
-    const codeInput = document.getElementById('league-code-input');
-    const code = codeInput ? codeInput.value.trim() : '';
-    
-    if (!code || code.length !== 6) {
-        alert("Please enter a valid 6-digit league code.");
-        return;
-    }
 
-   try {
-        const response = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${code}`);
-        const result = await response.json();
-
-        if (result.status === 'success') {
-            // Save settings to localStorage
-            localStorage.setItem('league_webhook_url', result.webhookUrl);
-            localStorage.setItem('user_sheet_url', result.rosterUrl);
-            localStorage.setItem('user_stats_url', result.statsUrl);
-            localStorage.setItem('user_pay_url', result.payUrl);
-            localStorage.setItem('pay_match_fee', result.weeklyFees);
-            localStorage.setItem('pay_val_8bb', result.bb8Payout);
-            localStorage.setItem('pay_val_run', result.runPayout);
-            localStorage.setItem('league_name', result.leagueName);
-
-            // Update UI elements
-            const webhookInput = document.getElementById('sheet-webhook-url');
-            if (webhookInput) webhookInput.value = result.webhookUrl;
-
-            const sheetUrlInput = document.getElementById('sheet-url');
-            if (sheetUrlInput) sheetUrlInput.value = result.rosterUrl;
-
-            const statsUrlInput = document.getElementById('stats-url');
-            if (statsUrlInput) statsUrlInput.value = result.statsUrl;
-
-            const payUrlInput = document.getElementById('pay-url-input');
-            if (payUrlInput) payUrlInput.value = result.payUrl;
-
-            const matchFeeInput = document.getElementById('weekly-match-fee');
-            if (matchFeeInput) matchFeeInput.value = result.weeklyFees;
-
-            const val8bbInput = document.getElementById('val-8bb');
-            if (val8bbInput) val8bbInput.value = result.bb8Payout;
-
-            const valRunInput = document.getElementById('val-run');
-            if (valRunInput) valRunInput.value = result.runPayout;
-
-            // Trigger roster refresh & recalculation
-            if (result.rosterUrl) fetchRosters(result.rosterUrl, false);
-            if (typeof calculateMatchOwed === 'function') calculateMatchOwed();
-
-            alert(`Successfully connected to ${result.leagueName}! Settings synchronized.`);
-        } else {
-            alert("Error: " + result.message);
+    async function fetchLeagueConfig() {
+        const codeInput = document.getElementById('league-code-input');
+        const code = codeInput ? codeInput.value.trim() : '';
+        
+        if (!code || code.length !== 6) {
+            alert("Please enter a valid 6-digit league code.");
+            return;
         }
-    } catch (err) {
-        alert("Failed to connect to central database: " + err.message);
+
+        try {
+            const response = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${code}`);
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                localStorage.setItem('league_webhook_url', result.webhookUrl);
+                localStorage.setItem('user_sheet_url', result.rosterUrl);
+                localStorage.setItem('user_stats_url', result.statsUrl);
+                localStorage.setItem('user_pay_url', result.payUrl);
+                localStorage.setItem('pay_match_fee', result.weeklyFees);
+                localStorage.setItem('pay_val_8bb', result.bb8Payout);
+                localStorage.setItem('pay_val_run', result.runPayout);
+                localStorage.setItem('league_name', result.leagueName);
+
+                const sheetUrlInput = document.getElementById('sheet-url');
+                if (sheetUrlInput) sheetUrlInput.value = result.rosterUrl;
+
+                const statsUrlInput = document.getElementById('stats-url');
+                if (statsUrlInput) statsUrlInput.value = result.statsUrl;
+
+                const payUrlInput = document.getElementById('pay-url-input');
+                if (payUrlInput) payUrlInput.value = result.payUrl;
+
+                const matchFeeInput = document.getElementById('weekly-match-fee');
+                if (matchFeeInput) matchFeeInput.value = result.weeklyFees;
+
+                const val8bbInput = document.getElementById('val-8bb');
+                if (val8bbInput) val8bbInput.value = result.bb8Payout;
+
+                const valRunInput = document.getElementById('val-run');
+                if (valRunInput) valRunInput.value = result.runPayout;
+
+                if (result.rosterUrl) fetchRosters(result.rosterUrl, false);
+                if (typeof calculateMatchOwed === 'function') calculateMatchOwed();
+
+                alert(`Successfully connected to ${result.leagueName}! Settings synchronized.`);
+            } else {
+                alert("Error: " + result.message);
+            }
+        } catch (err) {
+            alert("Failed to connect to central database: " + err.message);
+        }
     }
-}
+
     function parseCSV(csvText, showPopup = false) {
         const lines = csvText.split(/\r?\n/);
         const newRosters = {};
