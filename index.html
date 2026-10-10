@@ -345,6 +345,16 @@
 <details id="setup-panel">
     <summary onclick="handleSetupToggle(event)">⚙️ SETUP: CONFIG & STATS</summary>
     <div class="settings-content">
+       <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid var(--gold); margin-bottom: 10px;">
+        <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">League Quick-Connect</div>
+        <div class="pay-input-group">
+            <label for="league-code-input">Enter 6-Digit League Code</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="league-code-input" placeholder="e.g. 482910" maxlength="6">
+                <button type="button" class="btn" onclick="fetchLeagueConfig()" style="padding: 0 15px; margin: 0; font-size: 0.75rem;">Sync</button>
+            </div>
+        </div>
+    </div> 
         <div class="status-container">
             <div id="led" class="led-light"></div>
             <span id="status-text">ROSTER: DISCONNECTED</span>
@@ -747,7 +757,67 @@
             parseCSV(data, showPopup);
         } catch (err) { setStatus('error'); }
     }
+async function fetchLeagueConfig() {
+    const codeInput = document.getElementById('league-code-input');
+    const code = codeInput ? codeInput.value.trim() : '';
+    
+    if (!code || code.length !== 6) {
+        alert("Please enter a valid 6-digit league code.");
+        return;
+    }
 
+    // PASTE YOUR DEPLOYED CENTRAL DATABASE WEB APP URL HERE:
+    const centralDatabaseUrl = 'https://script.google.com/macros/s/AKfycbzIpMJeC76FBkLwbDeQA3qqNLbkQ73QlNDb4VI_Dt05g9FlFYCRj9HnOUE54h5Nq0PrNQ/exec';
+    
+    try {
+        const response = await fetch(`${centralDatabaseUrl}?action=getConfig&code=${code}`);
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            // Save settings to localStorage
+            localStorage.setItem('league_webhook_url', result.webhookUrl);
+            localStorage.setItem('user_sheet_url', result.rosterUrl);
+            localStorage.setItem('user_stats_url', result.statsUrl);
+            localStorage.setItem('user_pay_url', result.payUrl);
+            localStorage.setItem('pay_match_fee', result.weeklyFees);
+            localStorage.setItem('pay_val_8bb', result.bb8Payout);
+            localStorage.setItem('pay_val_run', result.runPayout);
+            localStorage.setItem('league_name', result.leagueName);
+
+            // Update UI elements
+            const webhookInput = document.getElementById('sheet-webhook-url');
+            if (webhookInput) webhookInput.value = result.webhookUrl;
+
+            const sheetUrlInput = document.getElementById('sheet-url');
+            if (sheetUrlInput) sheetUrlInput.value = result.rosterUrl;
+
+            const statsUrlInput = document.getElementById('stats-url');
+            if (statsUrlInput) statsUrlInput.value = result.statsUrl;
+
+            const payUrlInput = document.getElementById('pay-url-input');
+            if (payUrlInput) payUrlInput.value = result.payUrl;
+
+            const matchFeeInput = document.getElementById('weekly-match-fee');
+            if (matchFeeInput) matchFeeInput.value = result.weeklyFees;
+
+            const val8bbInput = document.getElementById('val-8bb');
+            if (val8bbInput) val8bbInput.value = result.bb8Payout;
+
+            const valRunInput = document.getElementById('val-run');
+            if (valRunInput) valRunInput.value = result.runPayout;
+
+            // Trigger roster refresh & recalculation
+            if (result.rosterUrl) fetchRosters(result.rosterUrl, false);
+            if (typeof calculateMatchOwed === 'function') calculateMatchOwed();
+
+            alert(`Successfully connected to ${result.leagueName}! Settings synchronized.`);
+        } else {
+            alert("Error: " + result.message);
+        }
+    } catch (err) {
+        alert("Failed to connect to central database: " + err.message);
+    }
+}
     function parseCSV(csvText, showPopup = false) {
         const lines = csvText.split(/\r?\n/);
         const newRosters = {};
