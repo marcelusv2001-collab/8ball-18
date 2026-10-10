@@ -771,11 +771,8 @@ async function fetchLeagueConfig() {
         return;
     }
 
-    // PASTE YOUR DEPLOYED CENTRAL DATABASE WEB APP URL HERE:
-    const centralDatabaseUrl = 'https://script.google.com/macros/s/AKfycbzIpMJeC76FBkLwbDeQA3qqNLbkQ73QlNDb4VI_Dt05g9FlFYCRj9HnOUE54h5Nq0PrNQ/exec';
-    
-    try {
-        const response = await fetch(`${centralDatabaseUrl}?action=getConfig&code=${code}`);
+   try {
+        const response = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${code}`);
         const result = await response.json();
 
         if (result.status === 'success') {
