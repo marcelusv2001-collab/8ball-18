@@ -685,14 +685,19 @@
     const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) submitBtn.innerText = 'SENDING...';
 
+    const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
+    const vT = (document.getElementById('v-team').value || "Visit").toUpperCase();
+
     const payloadData = {
         payload: msg,
+        homeTeam: hT,
+        visitTeam: vT,
+        games: state, // <--- Sends the full structured array of 18 games
         homeSig: homeSignatureData || '',
         visitSig: visitingSignatureData || ''
     };
 
     try {
-        // Use text/plain to bypass CORS preflight while preserving the JSON body
         await fetch(webhookUrl, {
             method: 'POST',
             headers: {
@@ -701,7 +706,7 @@
             body: JSON.stringify(payloadData)
         });
 
-        alert('Match successfully submitted to the admin queue!');
+        alert('Match successfully submitted and parsed to the league database!');
         if (submitBtn) {
             submitBtn.innerText = 'Submitted Successfully';
             submitBtn.disabled = true;
