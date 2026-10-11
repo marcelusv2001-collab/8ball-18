@@ -687,8 +687,11 @@ async function proceedToSendText() {
 
     const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
     const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
-    const hScore = state.filter(g => g.win === 'h').length;
-    const vScore = state.filter(g => g.win === 'v').length;
+    
+    // Pull the exact score values displayed in your footer score chips
+    const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
+    const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
+    
     const leagueTitle = localStorage.getItem('league_name') || "8 Ball League";
 
     const payloadData = {
@@ -712,7 +715,7 @@ async function proceedToSendText() {
             body: JSON.stringify(payloadData)
         });
 
-        alert('Match successfully submitted and matched to listener schema!');
+        alert('Match successfully submitted with correct scores!');
         if (submitBtn) {
             submitBtn.innerText = 'Submitted Successfully';
             submitBtn.disabled = true;
