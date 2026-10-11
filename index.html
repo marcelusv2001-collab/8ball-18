@@ -673,7 +673,7 @@
         }
     }
 
-   async function proceedToSendText() {
+async function proceedToSendText() {
     const msg = buildMessage();
     const webhookUrl = localStorage.getItem('league_webhook_url');
 
@@ -686,13 +686,19 @@
     if (submitBtn) submitBtn.innerText = 'SENDING...';
 
     const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
-    const vT = (document.getElementById('v-team').value || "Visit").toUpperCase();
+    const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
+    const hScore = state.filter(g => g.win === 'h').length;
+    const vScore = state.filter(g => g.win === 'v').length;
+    const leagueTitle = localStorage.getItem('league_name') || "8 Ball League";
 
     const payloadData = {
         payload: msg,
+        leagueTitle: leagueTitle,
         homeTeam: hT,
+        homeScore: hScore,
         visitTeam: vT,
-        games: state, // <--- Sends the full structured array of 18 games
+        visitScore: vScore,
+        games: state,
         homeSig: homeSignatureData || '',
         visitSig: visitingSignatureData || ''
     };
@@ -706,7 +712,7 @@
             body: JSON.stringify(payloadData)
         });
 
-        alert('Match successfully submitted and parsed to the league database!');
+        alert('Match successfully submitted and matched to listener schema!');
         if (submitBtn) {
             submitBtn.innerText = 'Submitted Successfully';
             submitBtn.disabled = true;
