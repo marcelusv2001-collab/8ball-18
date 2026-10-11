@@ -673,42 +673,44 @@
         }
     }
 
-    async function proceedToSendText() {
-        const msg = buildMessage();
-        const webhookUrl = localStorage.getItem('league_webhook_url');
+   async function proceedToSendText() {
+    const msg = buildMessage();
+    const webhookUrl = localStorage.getItem('league_webhook_url');
 
-        if (!webhookUrl) {
-            window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
-            return;
-        }
-
-        const submitBtn = document.getElementById('submit-btn');
-        if (submitBtn) submitBtn.innerText = 'SENDING...';
-
-        const payloadData = {
-            payload: msg,
-            homeSig: homeSignatureData || '',
-            visitSig: visitingSignatureData || ''
-        };
-
-        try {
-            await fetch(webhookUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(payloadData)
-            });
-
-            alert('Match successfully submitted to the admin queue!');
-            if (submitBtn) {
-                submitBtn.innerText = 'Submitted Successfully';
-                submitBtn.disabled = true;
-            }
-        } catch (err) {
-            alert('Error sending match to backend: ' + err.message);
-            if (submitBtn) submitBtn.innerText = 'Submit Match';
-        }
+    if (!webhookUrl) {
+        window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
+        return;
     }
 
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) submitBtn.innerText = 'SENDING...';
+
+    const payloadData = {
+        payload: msg,
+        homeSig: homeSignatureData || '',
+        visitSig: visitingSignatureData || ''
+    };
+
+    try {
+        // Use text/plain to bypass CORS preflight while preserving the JSON body
+        await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(payloadData)
+        });
+
+        alert('Match successfully submitted to the admin queue!');
+        if (submitBtn) {
+            submitBtn.innerText = 'Submitted Successfully';
+            submitBtn.disabled = true;
+        }
+    } catch (err) {
+        alert('Error sending match to backend: ' + err.message);
+        if (submitBtn) submitBtn.innerText = 'Submit Match';
+    }
+}
     function toggleHelp() {
         const modal = document.getElementById('help-modal');
         modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
