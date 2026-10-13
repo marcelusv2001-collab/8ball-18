@@ -745,13 +745,13 @@ async function proceedToSendText() {
 
         // 2. Post match data to the listener sheet's League Matches tab
         await fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8"
-            },
-            body: JSON.stringify(payloadData)
-        });
-
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(payloadData)
+});
         alert('Match successfully submitted and routed to your league sheet!');
         if (submitBtn) {
             submitBtn.innerText = 'Submitted Successfully';
