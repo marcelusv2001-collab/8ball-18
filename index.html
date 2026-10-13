@@ -364,6 +364,34 @@
             <div id="led" class="led-light"></div>
             <span id="status-text">ROSTER: DISCONNECTED</span>
         </div>
+        <div id="advanced-settings-container" style="display: none;">
+            <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
+            <button type="button" id="clear-match-btn" class="clear-match-btn" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
+            <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
+            <div class="pay-input-group">
+                <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
+                <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag">
+            </div>
+            <div style="border-top: 1px solid #334155; margin-top: 4px; padding-top: 6px;">
+                <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">Match Payment Calculator</div>
+                <div class="pay-input-group">
+                    <label for="weekly-match-fee">Weekly Match Fee ($)</label>
+                    <input type="number" id="weekly-match-fee" placeholder="0" oninput="calculateMatchOwed()">
+                </div>
+                <div class="pay-input-group">
+                    <label for="val-8bb">8BB Worth ($)</label>
+                    <input type="number" id="val-8bb" placeholder="0" oninput="calculateMatchOwed()">
+                </div>
+                <div class="pay-input-group">
+                    <label for="val-run">Run Worth ($)</label>
+                    <input type="number" id="val-run" placeholder="0" oninput="calculateMatchOwed()">
+                </div>
+                <div class="pay-calc-result" style="margin-bottom: 8px;">
+                    <div>Total Amount Owed:</div>
+                    <span id="amount-owed-display">$0.00</span>
+                </div>
+            </div>
+        </div>
         <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
         <button type="button" id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
         <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
