@@ -707,7 +707,7 @@ async function proceedToSendText() {
 
     try {
         // 1. Fetch the exact listener webhook URL from Central DB (Column I)
-        const lookupUrl = `${CENTRAL_DB_URL}?action=getListenerUrl&code=${encodeURIComponent(leagueCode)}`;
+       const lookupUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(leagueCode)}`;
         const lookupRes = await fetch(lookupUrl);
         const lookupData = await lookupRes.json();
 
