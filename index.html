@@ -774,21 +774,25 @@ async function proceedToSendText() {
 async function checkForUpdates(code) {
     if (!code) return;
     try {
-        // 1. Check Central DB first for global app/software updates
+        // 1. Check Central DB for global updates using getAdminUpdate
         const centralUrl = `${CENTRAL_DB_URL}?action=getAdminUpdate&code=${code}`;
         const centralRes = await fetch(centralUrl);
         const centralResult = await centralRes.json();
         
         if (centralResult.status === 'success' && centralResult.hasUpdate) {
             const lastSeenCentral = localStorage.getItem('last_seen_central_version');
-            if (lastSeenCentral !== centralResult.versionTag) {
-                triggerUpdateModal(centralResult.updateTitle || "📢 App Update", centralResult.updateMessage);
-                localStorage.setItem('last_seen_central_version', centralResult.versionTag);
-                return; // Stop here so global app updates take priority
+            
+            // Trigger if version tag is new OR if versionTag is forced
+            if (!lastSeenCentral || lastSeenCentral !== centralResult.versionTag) {
+                triggerUpdateModal(centralResult.updateTitle || "📢 Central Announcement", centralResult.updateMessage);
+                if (centralResult.versionTag) {
+                    localStorage.setItem('last_seen_central_version', centralResult.versionTag);
+                }
+                return; // Stop here so Central DB announcement takes priority
             }
         }
 
-        // 2. If no global update, check the individual league listener sheet
+        // 2. Fall back to League Listener Sheet updates if no central update
         const adminListenerUrl = localStorage.getItem('league_webhook_url');
         if (adminListenerUrl) {
             const targetUrl = `${adminListenerUrl}?action=getAdminUpdate`;
@@ -797,9 +801,11 @@ async function checkForUpdates(code) {
             
             if (result.status === 'success' && result.hasUpdate) {
                 const lastSeenVersion = localStorage.getItem('last_seen_update_version');
-                if (lastSeenVersion !== result.versionTag) {
+                if (!lastSeenVersion || lastSeenVersion !== result.versionTag) {
                     triggerUpdateModal(result.updateTitle || "📢 League Notice", result.updateMessage);
-                    localStorage.setItem('last_seen_update_version', result.versionTag);
+                    if (result.versionTag) {
+                        localStorage.setItem('last_seen_update_version', result.versionTag);
+                    }
                 }
             }
         }
