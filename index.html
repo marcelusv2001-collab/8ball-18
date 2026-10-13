@@ -757,23 +757,45 @@ async function proceedToSendText() {
 async function checkForUpdates(code) {
     if (!code) return;
     try {
-        const response = await fetch(`${CENTRAL_DB_URL}?action=getUpdateFlag&code=${code}`);
-        const result = await response.json();
+        // 1. Check Central DB first for global app/software updates
+        const centralUrl = `${CENTRAL_DB_URL}?action=getUpdateFlag&code=${code}`;
+        const centralRes = await fetch(centralUrl);
+        const centralResult = await centralRes.json();
         
-        if (result.status === 'success' && result.hasUpdate) {
-            const lastSeenVersion = localStorage.getItem('last_seen_update_version');
-            if (lastSeenVersion !== result.versionTag) {
-                document.getElementById('update-modal-title').innerText = result.updateTitle || "📢 League Announcement";
-                document.getElementById('update-modal-text').innerText = result.updateMessage;
-                document.getElementById('update-modal').style.display = 'block';
-                localStorage.setItem('last_seen_update_version', result.versionTag);
+        if (centralResult.status === 'success' && centralResult.hasUpdate) {
+            const lastSeenCentral = localStorage.getItem('last_seen_central_version');
+            if (lastSeenCentral !== centralResult.versionTag) {
+                triggerUpdateModal(centralResult.updateTitle || "📢 App Update", centralResult.updateMessage);
+                localStorage.setItem('last_seen_central_version', centralResult.versionTag);
+                return; // Stop here so global app updates take priority
+            }
+        }
+
+        // 2. If no global update, check the individual league listener sheet
+        const adminListenerUrl = localStorage.getItem('league_webhook_url');
+        if (adminListenerUrl) {
+            const targetUrl = `${adminListenerUrl}?action=getAdminUpdate`;
+            const response = await fetch(targetUrl);
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.hasUpdate) {
+                const lastSeenVersion = localStorage.getItem('last_seen_update_version');
+                if (lastSeenVersion !== result.versionTag) {
+                    triggerUpdateModal(result.updateTitle || "📢 League Notice", result.updateMessage);
+                    localStorage.setItem('last_seen_update_version', result.versionTag);
+                }
             }
         }
     } catch (e) {
-        console.error("Could not fetch update flag", e);
+        console.error("Could not fetch update flags", e);
     }
 }
 
+function triggerUpdateModal(title, message) {
+    document.getElementById('update-modal-title').innerText = title;
+    document.getElementById('update-modal-text').innerText = message;
+    document.getElementById('update-modal').style.display = 'block';
+}
     async function saveSettings() {
         const rUrl = document.getElementById('sheet-url').value.trim();
         const sUrl = document.getElementById('stats-url').value.trim();
