@@ -466,10 +466,11 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         // Check for updates automatically if a league code is already saved
-    const savedCode = localStorage.getItem('league_code');
-    if (savedCode) { 
-        checkForUpdates(savedCode); 
-    }
+        const savedCode = localStorage.getItem('league_code');
+        if (savedCode) { 
+            checkForUpdates(savedCode); 
+        }
+
         const savedPayUrl = localStorage.getItem('user_pay_url');
         if (savedPayUrl) {
             const payInput = document.getElementById('pay-url-input');
