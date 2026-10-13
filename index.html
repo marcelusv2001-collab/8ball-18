@@ -345,87 +345,24 @@
     </div>
     <h1>8 Ball 18 Games</h1>
     <button type="button" class="help-trigger" onclick="toggleHelp()">❓</button>
+<header id="app-header">
+    <div class="header-btns">
+        <button type="button" class="reset-btn" onclick="resetBoard()">🗑️</button>
+        <button type="button" class="start-btn" onclick="saveSettings()">START</button>
+        <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
+    </div>
+    <h1>8 Ball 18 Games</h1>
+    <button type="button" class="help-trigger" onclick="toggleHelp()">❓</button>
 </header>
 
+<!-- PASTE THE SNIPPET HERE -->
 <details id="setup-panel">
     <summary onclick="handleSetupToggle(event)">⚙️ SETUP: CONFIG & STATS</summary>
     <div class="settings-content">
-       <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid var(--gold); margin-bottom: 10px;">
-        <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">League Quick-Connect</div>
-        <div class="pay-input-group">
-            <label for="league-code-input">Enter 6-Digit League Code</label>
-            <div style="display: flex; gap: 8px;">
-                <input type="text" id="league-code-input" placeholder="e.g. 482910" maxlength="6">
-                <button type="button" class="btn" onclick="fetchLeagueConfig()" style="padding: 0 15px; margin: 0; font-size: 0.75rem;">Sync</button>
-            </div>
-        </div>
-    </div> 
-        <div class="status-container">
-            <div id="led" class="led-light"></div>
-            <span id="status-text">ROSTER: DISCONNECTED</span>
-        </div>
-        <div id="advanced-settings-container" style="display: none;">
-            <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
-            <button type="button" id="clear-match-btn" class="clear-match-btn" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
-            <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
-            <div class="pay-input-group">
-                <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
-                <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag">
-            </div>
-            <div style="border-top: 1px solid #334155; margin-top: 4px; padding-top: 6px;">
-                <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">Match Payment Calculator</div>
-                <div class="pay-input-group">
-                    <label for="weekly-match-fee">Weekly Match Fee ($)</label>
-                    <input type="number" id="weekly-match-fee" placeholder="0" oninput="calculateMatchOwed()">
-                </div>
-                <div class="pay-input-group">
-                    <label for="val-8bb">8BB Worth ($)</label>
-                    <input type="number" id="val-8bb" placeholder="0" oninput="calculateMatchOwed()">
-                </div>
-                <div class="pay-input-group">
-                    <label for="val-run">Run Worth ($)</label>
-                    <input type="number" id="val-run" placeholder="0" oninput="calculateMatchOwed()">
-                </div>
-                <div class="pay-calc-result" style="margin-bottom: 8px;">
-                    <div>Total Amount Owed:</div>
-                    <span id="amount-owed-display">$0.00</span>
-                </div>
-            </div>
-        </div>
-        <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
-        <button type="button" id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
-        <input type="text" id="stats-url" placeholder="Paste League Stats URL here...">
-        <div class="pay-input-group">
-            <label for="pay-url-input">Payment Link (Cash App / Venmo / PayPal)</label>
-            <input type="text" id="pay-url-input" placeholder="https://cash.app/$YourTag">
-        </div>
-        <div style="border-top: 1px solid #334155; margin-top: 4px; padding-top: 6px;">
-            <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">Match Payment Calculator</div>
-            <div class="pay-input-group">
-                <label for="weekly-match-fee">Weekly Match Fee ($)</label>
-                <input type="number" id="weekly-match-fee" placeholder="0" oninput="calculateMatchOwed()">
-            </div>
-            <div class="pay-input-group">
-                <label for="val-8bb">8BB Worth ($)</label>
-                <input type="number" id="val-8bb" placeholder="0" oninput="calculateMatchOwed()">
-            </div>
-            <div class="pay-input-group">
-                <label for="val-run">Run Worth ($)</label>
-                <input type="number" id="val-run" placeholder="0" oninput="calculateMatchOwed()">
-            </div>
-            <div class="pay-calc-result" style="margin-bottom: 8px;">
-                <div>Total Amount Owed:</div>
-                <span id="amount-owed-display">$0.00</span>
-            </div>
-        </div>
-        
-        <div class="settings-btns">
-            <button type="button" class="btn-load" onclick="saveSettings()">SAVE ALL</button>
-            <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
-        </div>
+        ...
     </div>
 </details>
-
+    
 <main id="scoring-interface">
     <div class="team-banner">
         <div class="input-wrapper">
