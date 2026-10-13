@@ -775,7 +775,7 @@ async function checkForUpdates(code) {
     if (!code) return;
     try {
         // 1. Check Central DB first for global app/software updates
-        const centralUrl = `${CENTRAL_DB_URL}?action=getUpdateFlag&code=${code}`;
+        const centralUrl = `${CENTRAL_DB_URL}?action=getAdminUpdate&code=${code}`;
         const centralRes = await fetch(centralUrl);
         const centralResult = await centralRes.json();
         
