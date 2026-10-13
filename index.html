@@ -773,26 +773,33 @@ async function proceedToSendText() {
 
 async function checkForUpdates(code) {
     if (!code) return;
+
+    // --- CHANNEL 1: Central DB Updates (Global Network Announcements) ---
     try {
-        // 1. Check Central DB for global updates using getAdminUpdate
-        const centralUrl = `${CENTRAL_DB_URL}?action=getAdminUpdate&code=${code}`;
+        const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
         const centralRes = await fetch(centralUrl);
         const centralResult = await centralRes.json();
         
         if (centralResult.status === 'success' && centralResult.hasUpdate) {
             const lastSeenCentral = localStorage.getItem('last_seen_central_version');
             
-            // Trigger if version tag is new OR if versionTag is forced
-            if (!lastSeenCentral || lastSeenCentral !== centralResult.versionTag) {
-                triggerUpdateModal(centralResult.updateTitle || "📢 Central Announcement", centralResult.updateMessage);
+            // Check if this central update version hasn't been acknowledged yet
+            if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
+                triggerUpdateModal(
+                    centralResult.updateTitle || "📢 Central Network Announcement", 
+                    centralResult.updateMessage
+                );
                 if (centralResult.versionTag) {
-                    localStorage.setItem('last_seen_central_version', centralResult.versionTag);
+                    localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
                 }
-                return; // Stop here so Central DB announcement takes priority
             }
         }
+    } catch (e) {
+        console.error("Could not fetch Central DB updates:", e);
+    }
 
-        // 2. Fall back to League Listener Sheet updates if no central update
+    // --- CHANNEL 2: League Listener Sheet Updates (Local League Announcements) ---
+    try {
         const adminListenerUrl = localStorage.getItem('league_webhook_url');
         if (adminListenerUrl) {
             const targetUrl = `${adminListenerUrl}?action=getAdminUpdate`;
@@ -801,16 +808,21 @@ async function checkForUpdates(code) {
             
             if (result.status === 'success' && result.hasUpdate) {
                 const lastSeenVersion = localStorage.getItem('last_seen_update_version');
-                if (!lastSeenVersion || lastSeenVersion !== result.versionTag) {
-                    triggerUpdateModal(result.updateTitle || "📢 League Notice", result.updateMessage);
+                
+                // Check if this local league update version hasn't been acknowledged yet
+                if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
+                    triggerUpdateModal(
+                        result.updateTitle || "📢 Local League Notice", 
+                        result.updateMessage
+                    );
                     if (result.versionTag) {
-                        localStorage.setItem('last_seen_update_version', result.versionTag);
+                        localStorage.setItem('last_seen_update_version', String(result.versionTag));
                     }
                 }
             }
         }
     } catch (e) {
-        console.error("Could not fetch update flags", e);
+        console.error("Could not fetch Local Listener updates:", e);
     }
 }
 
