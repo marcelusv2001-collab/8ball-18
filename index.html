@@ -695,38 +695,55 @@
 
 async function proceedToSendText() {
     const msg = buildMessage();
-    const webhookUrl = localStorage.getItem('league_webhook_url');
+    const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
 
-    if (!webhookUrl) {
-        window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
+    if (!leagueCode) {
+        alert("Please enter a 6-digit league code before submitting.");
         return;
     }
 
     const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) submitBtn.innerText = 'SENDING...';
-
-    const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
-    const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
-    
-    // Pull the exact score values displayed in your footer score chips
-    const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
-    const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
-    
-    const leagueTitle = localStorage.getItem('league_name') || "8 Ball League";
-
-    const payloadData = {
-        payload: msg,
-        leagueTitle: leagueTitle,
-        homeTeam: hT,
-        homeScore: hScore,
-        visitTeam: vT,
-        visitScore: vScore,
-        games: state,
-        homeSig: homeSignatureData || '',
-        visitSig: visitingSignatureData || ''
-    };
+    if (submitBtn) submitBtn.innerText = 'LOOKING UP...';
 
     try {
+        // 1. Fetch the exact listener webhook URL from Central DB (Column I)
+        const lookupUrl = `${CENTRAL_DB_URL}?action=getListenerUrl&code=${encodeURIComponent(leagueCode)}`;
+        const lookupRes = await fetch(lookupUrl);
+        const lookupData = await lookupRes.json();
+
+        if (lookupData.status !== 'success' || !lookupData.listenerUrl) {
+            alert("Could not find a registered listener URL for league code: " + leagueCode);
+            if (submitBtn) submitBtn.innerText = 'Submit Match';
+            return;
+        }
+
+        const webhookUrl = lookupData.listenerUrl;
+        // Cache it locally for future quick-reference
+        localStorage.setItem('league_webhook_url', webhookUrl);
+
+        if (submitBtn) submitBtn.innerText = 'SENDING...';
+
+        const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
+        const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
+        
+        const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
+        const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
+        
+        const leagueTitle = localStorage.getItem('league_name') || "8 Ball League";
+
+        const payloadData = {
+            payload: msg,
+            leagueTitle: leagueTitle,
+            homeTeam: hT,
+            homeScore: hScore,
+            visitTeam: vT,
+            visitScore: vScore,
+            games: state,
+            homeSig: homeSignatureData || '',
+            visitSig: visitingSignatureData || ''
+        };
+
+        // 2. Post match data to the listener sheet's League Matches tab
         await fetch(webhookUrl, {
             method: 'POST',
             headers: {
@@ -735,7 +752,7 @@ async function proceedToSendText() {
             body: JSON.stringify(payloadData)
         });
 
-        alert('Match successfully submitted with correct scores!');
+        alert('Match successfully submitted and routed to your league sheet!');
         if (submitBtn) {
             submitBtn.innerText = 'Submitted Successfully';
             submitBtn.disabled = true;
