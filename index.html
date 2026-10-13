@@ -302,6 +302,15 @@
     </div>
 </div>
 
+<!-- UPDATE BROADCAST MODAL -->
+<div id="update-modal">
+    <div class="modal-content">
+        <h2 id="update-modal-title">📢 League Announcement</h2>
+        <p id="update-modal-text">Checking for updates...</p>
+        <button type="button" class="help-close" onclick="closeUpdateModal()">GOT IT!</button>
+    </div>
+</div>
+    
 <div id="match-picker-modal">
     <div class="modal-content">
         <h2>Select Match Schedule</h2>
@@ -456,6 +465,11 @@
     let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
+        // Check for updates automatically if a league code is already saved
+    const savedCode = localStorage.getItem('league_code');
+    if (savedCode) { 
+        checkForUpdates(savedCode); 
+    }
         const savedPayUrl = localStorage.getItem('user_pay_url');
         if (savedPayUrl) {
             const payInput = document.getElementById('pay-url-input');
@@ -735,6 +749,30 @@ async function proceedToSendText() {
         modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
     }
 
+    function closeUpdateModal() {
+    document.getElementById('update-modal').style.display = 'none';
+}
+
+async function checkForUpdates(code) {
+    if (!code) return;
+    try {
+        const response = await fetch(`${CENTRAL_DB_URL}?action=getUpdateFlag&code=${code}`);
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.hasUpdate) {
+            const lastSeenVersion = localStorage.getItem('last_seen_update_version');
+            if (lastSeenVersion !== result.versionTag) {
+                document.getElementById('update-modal-title').innerText = result.updateTitle || "📢 League Announcement";
+                document.getElementById('update-modal-text').innerText = result.updateMessage;
+                document.getElementById('update-modal').style.display = 'block';
+                localStorage.setItem('last_seen_update_version', result.versionTag);
+            }
+        }
+    } catch (e) {
+        console.error("Could not fetch update flag", e);
+    }
+}
+
     async function saveSettings() {
         const rUrl = document.getElementById('sheet-url').value.trim();
         const sUrl = document.getElementById('stats-url').value.trim();
@@ -788,6 +826,7 @@ async function proceedToSendText() {
             const result = await response.json();
 
             if (result.status === 'success') {
+                localStorage.setItem('league_code', code);
                 localStorage.setItem('league_webhook_url', result.webhookUrl);
                 localStorage.setItem('user_sheet_url', result.rosterUrl);
                 localStorage.setItem('user_stats_url', result.statsUrl);
@@ -822,6 +861,7 @@ async function proceedToSendText() {
                 if (typeof calculateMatchOwed === 'function') calculateMatchOwed();
 
                 alert(`Successfully connected to ${result.leagueName}! Settings synchronized.`);
+                checkForUpdates(code);
             } else {
                 alert("Error: " + result.message);
             }
