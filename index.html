@@ -665,7 +665,7 @@
         document.getElementById('sig-modal').style.display = 'none';
     }
 
-    function confirmSignature() {
+   function confirmSignature() {
         const blank = document.createElement('canvas');
         blank.width = canvas.width;
         blank.height = canvas.height;
@@ -684,12 +684,12 @@
             clearSignature();
             setTimeout(() => { if(window.resizeSigCanvas) window.resizeSigCanvas(); }, 50);
         } else {
-            visitingSignatureData = dataUrl;
+            visitingSignatureData = dataUrl;   // <-- The second signature is saved here
             isApproved = true;
             saveMatchState();
             closeSignatureModal();
             draw();
-            proceedToSendText();
+            proceedToSendText();               // <-- proceedToSendText() is triggered immediately here
         }
     }
 
