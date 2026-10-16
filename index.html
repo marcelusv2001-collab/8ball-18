@@ -711,13 +711,14 @@ async function proceedToSendText() {
         const lookupRes = await fetch(lookupUrl);
         const lookupData = await lookupRes.json();
 
-        if (lookupData.status !== 'success' || !lookupData.listenerUrl) {
+        // ✅ FIXED: Check lookupData.webhookUrl to match Central DB
+        if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
             alert("Could not find a registered listener URL for league code: " + leagueCode);
             if (submitBtn) submitBtn.innerText = 'Submit Match';
             return;
         }
 
-        const webhookUrl = lookupData.listenerUrl;
+       const webhookUrl = lookupData.webhookUrl; // <-- Change listenerUrl to webhookUrl here!
         // Cache it locally for future quick-reference
         localStorage.setItem('league_webhook_url', webhookUrl);
 
