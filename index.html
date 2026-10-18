@@ -305,7 +305,7 @@
 <!-- UPDATE BROADCAST MODAL -->
 <div id="update-modal">
     <div class="modal-content">
-        <h2 id="update-modal-title">📢 League Announcement</h2>
+        <h2 id="update-modal-title">📢 App Announcement</h2>
         <p id="update-modal-text">Checking for updates...</p>
         <button type="button" class="help-close" onclick="closeUpdateModal()">GOT IT!</button>
     </div>
@@ -753,7 +753,7 @@ async function proceedToSendText() {
     },
     body: JSON.stringify(payloadData)
 });
-        alert('Match successfully submitted and routed to your league sheet!');
+        alert('Match successfully Submitted To Your League Administrator!');
         if (submitBtn) {
             submitBtn.innerText = 'Submitted Successfully';
             submitBtn.disabled = true;
