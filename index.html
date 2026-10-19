@@ -913,9 +913,6 @@ function triggerUpdateModal(title, message) {
                 const valRunInput = document.getElementById('val-run');
                 if (valRunInput) valRunInput.value = result.runPayout;
 
-                // UNHIDE ADVANCED SETTINGS CONTAINER UPON SUCCESSFUL SYNC
-                document.getElementById('advanced-settings-container').style.display = 'block';
-
                 if (result.rosterUrl) fetchRosters(result.rosterUrl, false);
                 if (typeof calculateMatchOwed === 'function') calculateMatchOwed();
 
