@@ -959,8 +959,15 @@ function triggerUpdateModal(title, message) {
                 if (result.rosterUrl) fetchRosters(result.rosterUrl, false);
                 if (typeof calculateMatchOwed === 'function') calculateMatchOwed();
 
-                alert(`Successfully connected to ${result.leagueName}! Settings synchronized.`);
+                // 1. Automatically close the settings panel (<details>)
+                const setupPanel = document.getElementById('setup-panel');
+                if (setupPanel) setupPanel.open = false;
+
+                // 2. Show the custom connected popup
+                alert(`You are connected to ${result.leagueName} and may proceed to load a match by pressing the start button!`);
+                
                 checkForUpdates(code);
+
             } else {
                 alert("Error: " + result.message);
             }
