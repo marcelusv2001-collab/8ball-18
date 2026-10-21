@@ -674,11 +674,12 @@
         }, 50);
     }
 
-    function closeSignatureModal() {
+                        function closeSignatureModal() {
         document.getElementById('sig-modal').style.display = 'none';
     }
 
-   function confirmSignature() {
+
+       function confirmSignature() {
         const blank = document.createElement('canvas');
         blank.width = canvas.width;
         blank.height = canvas.height;
@@ -697,15 +698,20 @@
             clearSignature();
             setTimeout(() => { if(window.resizeSigCanvas) window.resizeSigCanvas(); }, 50);
         } else {
-            visitingSignatureData = dataUrl;   // <-- The second signature is saved here
+            visitingSignatureData = dataUrl;
             isApproved = true;
             saveMatchState();
             closeSignatureModal();
             draw();
-            proceedToSendText();               // <-- proceedToSendText() is triggered immediately here
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const resendBtn = document.getElementById('resend-btn');
+            if (submitBtn) submitBtn.style.display = 'block';
+            if (resendBtn) resendBtn.style.display = 'none';
+            
+            proceedToSendText();
         }
     }
-
 async function proceedToSendText() {
     const msg = buildMessage();
     const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
@@ -774,16 +780,25 @@ async function proceedToSendText() {
     },
     body: JSON.stringify(payloadData)
 });
-        alert('Match successfully Submitted To Your League Administrator!');
-        if (submitBtn) {
-            submitBtn.innerText = 'Submitted Successfully';
-            submitBtn.disabled = true;
-        }
-    } catch (err) {
+                    alert('Match successfully Submitted To Your League Administrator!');
+            if (submitBtn) {
+                submitBtn.innerText = 'Submitted Successfully';
+                submitBtn.disabled = true;
+                submitBtn.classList.remove('loading');
+                submitBtn.style.display = 'none';
+            }
+            const resendBtn = document.getElementById('resend-btn');
+            if (resendBtn) resendBtn.style.display = 'block';
+
+        } catch (err) {
         alert('Error sending match to backend: ' + err.message);
-        if (submitBtn) submitBtn.innerText = 'Submit Match';
+        if (submitBtn) {
+            submitBtn.innerText = 'Submit Match';
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        }
     }
-}
+} 
     function toggleHelp() {
         const modal = document.getElementById('help-modal');
         modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
