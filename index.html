@@ -1238,6 +1238,16 @@ function triggerUpdateModal(title, message) {
             document.getElementById('h-team').value = ""; 
             document.getElementById('v-team').value = "";
             localStorage.removeItem('active_match_state');
+            const submitBtn = document.getElementById('submit-btn');
+            const resendBtn = document.getElementById('resend-btn');
+            if (submitBtn) {
+                submitBtn.style.display = 'block';
+                submitBtn.innerText = 'Submit Match';
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+            }
+            if (resendBtn) resendBtn.style.display = 'none';
+
             draw();
         }
     }
