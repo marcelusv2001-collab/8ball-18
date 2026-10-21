@@ -716,7 +716,11 @@ async function proceedToSendText() {
     }
 
     const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) submitBtn.innerText = 'LOOKING UP...';
+    if (submitBtn) {
+        submitBtn.innerText = '⏳ LOOKING UP...';
+        submitBtn.disabled = true;
+        submitBtn.classList.add('loading');
+    }
 
     try {
         // 1. Fetch the exact listener webhook URL from Central DB (Column I)
@@ -727,15 +731,19 @@ async function proceedToSendText() {
         // ✅ FIXED: Check lookupData.webhookUrl to match Central DB
         if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
             alert("Could not find a registered listener URL for league code: " + leagueCode);
-            if (submitBtn) submitBtn.innerText = 'Submit Match';
+            if (submitBtn) {
+                submitBtn.innerText = 'Submit Match';
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+            }
             return;
         }
-
        const webhookUrl = lookupData.webhookUrl; // <-- Change listenerUrl to webhookUrl here!
-        // Cache it locally for future quick-reference
+                // Cache it locally for future quick-reference
         localStorage.setItem('league_webhook_url', webhookUrl);
 
-        if (submitBtn) submitBtn.innerText = 'SENDING...';
+          if (submitBtn) submitBtn.innerText = '⏳ SENDING...';
+
 
         const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
         const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
