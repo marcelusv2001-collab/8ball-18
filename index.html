@@ -442,8 +442,8 @@
     </button>
     
     <button type="button" id="submit-btn" class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
-    <button type="button" id="resend-btn" class="btn-resend" style="display: none;" onclick="proceedToSendText()">📲 Resend Data</button>
-    
+        <button type="button" id="resend-btn" class="btn-resend" style="display: none;" onclick="handleResendMatch()">📲 Resend Data</button>
+
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
 </footer>
 
@@ -712,6 +712,13 @@
             proceedToSendText();
         }
     }
+
+    function handleResendMatch() {
+        if (confirm("Are you sure you want to resend the match data?")) {
+            proceedToSendText();
+        }
+    }
+
 async function proceedToSendText() {
     const msg = buildMessage();
     const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
