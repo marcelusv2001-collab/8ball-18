@@ -713,11 +713,18 @@
         }
     }
 
-    function handleResendMatch() {
+        function handleResendMatch() {
         if (confirm("Are you sure you want to resend the match data?")) {
+            const resendBtn = document.getElementById('resend-btn');
+            if (resendBtn) {
+                resendBtn.innerText = '⏳ RESENDING...';
+                resendBtn.disabled = true;
+                resendBtn.classList.add('loading');
+            }
             proceedToSendText();
         }
     }
+
 
 async function proceedToSendText() {
     const msg = buildMessage();
@@ -796,6 +803,7 @@ async function proceedToSendText() {
             }
             const resendBtn = document.getElementById('resend-btn');
             if (resendBtn) resendBtn.style.display = 'block';
+
 
         } catch (err) {
         alert('Error sending match to backend: ' + err.message);
