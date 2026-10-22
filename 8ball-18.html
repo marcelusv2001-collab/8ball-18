@@ -314,12 +314,49 @@
 </head>
 <body onclick="closeAllDropdowns(event)">
 
+<!-- EXPANDED HELP & INSTRUCTIONS MODAL -->
 <div id="help-modal">
-    <div class="modal-content">
-        <h2>How to use 8 Ball 18 Games</h2>
-        <p>1. <b>SETUP:</b> Connect your roster data.</p>
-        <p>2. <b>SCORING:</b> Tap 'W' to cycle wins. Home = <b>White Border</b>, Visit = <b>Red Border</b>.</p>
-        <p>3. <b>DATA:</b> Manual player entries and match progress are saved automatically.</p>
+    <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
+        <h2>📖 How to Use 8 Ball 18 Games</h2>
+        
+        <div style="font-size: 0.85rem; line-height: 1.5; color: #cbd5e1; text-align: left;">
+            <p style="margin-bottom: 12px;">Welcome to the official 18-Game Digital Scorekeeper! Follow these steps to set up, score, and submit your weekly match effortlessly.</p>
+
+            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">1. Connect & Sync League Data</h3>
+            <p>• Click <b>⚙️ SETUP</b> at the top of the screen.</p>
+            <p>• Enter your official <b>6-Digit League Code</b> in the box and tap <b>Sync</b>.</p>
+            <p>• This automatically loads your official team rosters, weekly match schedule, match fees, and payout rules from the central database.</p>
+            <p>• Tap <b>START</b> to pick your match date and load the scheduled home and visiting teams.</p>
+
+            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">2. Pick Teams & Players</h3>
+            <p>• Tap the <b>Home Team</b> or <b>Visiting Team</b> banner to select teams from the dropdown menu.</p>
+            <p>• For each game row (Games 1–18), tap a player slot to choose from your team’s synced roster.</p>
+            <p>• <b>Hands-Free Voice Input:</b> Tap the microphone icon (🎤) next to any player input to dictate names using your voice.</p>
+            <p>• <b>Substitute / New Players:</b> If a player isn't listed, choose <i>"➕ ADD NEW PLAYER"</i> to type their name manually.</p>
+
+            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">3. Score Games & Special Runs</h3>
+            <p>• <b>Assigning Wins:</b> Tap the <b>W</b> button on the far right of any game row to cycle the winner:
+                <br>&nbsp;&nbsp;– 1st Tap: <b>Home Win</b> (White highlighted border)
+                <br>&nbsp;&nbsp;– 2nd Tap: <b>Visiting Win</b> (Red highlighted border)
+                <br>&nbsp;&nbsp;– 3rd Tap: Reset game
+            </p>
+            <p>• <b>Special Markers:</b> Tap <b>Run</b> for Table Runs or <b>8B</b> for 8-On-Break accomplishments. Selecting a marker automatically credits the game win to that player.</p>
+
+            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">4. Match Fees & Payments</h3>
+            <p>• Look at the bottom payment bar to see the live total amount owed.</p>
+            <p>• Earned Table Runs (TR) and 8-On-Breaks (8BB) automatically deduct bonus payouts from your weekly team fees.</p>
+            <p>• Tap <b>💵 Pay</b> to open your team captain’s payment link (Cash App, Venmo, or PayPal) to send dues instantly.</p>
+
+            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">5. Signatures & Final Submission</h3>
+            <p>• Once all 18 games are scored, tap <b>SUBMIT MATCH</b>.</p>
+            <p>• The <b>Home Captain</b> signs on screen and taps <i>Accept & Continue</i>.</p>
+            <p>• The <b>Visiting Captain</b> signs next to verify the final scores.</p>
+            <p>• Once approved, the sheet locks, signs off, and transmits the score sheet directly to your League Operator.</p>
+
+            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">💡 Offline Safety</h3>
+            <p>• All match scores, selected players, and signatures save locally on your device in real time. If you lose cellular service, your work won't be lost!</p>
+        </div>
+
         <button type="button" class="help-close" onclick="toggleHelp()">GOT IT!</button>
     </div>
 </div>
