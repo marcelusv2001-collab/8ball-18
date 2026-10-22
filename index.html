@@ -61,6 +61,22 @@
             background: rgba(0,0,0,0.9); z-index: 2000;
             display: none; padding: 20px; overflow-y: auto;
         }
+
+        #update-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+        
         .modal-content {
             background: var(--slate); border: 2px solid var(--gold);
             border-radius: 12px; padding: 20px; max-width: 500px; margin: 0 auto;
@@ -822,7 +838,7 @@ async function proceedToSendText() {
     function closeUpdateModal() {
     document.getElementById('update-modal').style.display = 'none';
 }
-
+   
 async function checkForUpdates(code) {
     if (!code) return;
 
@@ -881,8 +897,9 @@ async function checkForUpdates(code) {
 function triggerUpdateModal(title, message) {
     document.getElementById('update-modal-title').innerText = title;
     document.getElementById('update-modal-text').innerText = message;
-    document.getElementById('update-modal').style.display = 'block';
+    document.getElementById('update-modal').style.display = 'flex';
 }
+
     async function saveSettings() {
         const rUrl = document.getElementById('sheet-url').value.trim();
         const sUrl = document.getElementById('stats-url').value.trim();
