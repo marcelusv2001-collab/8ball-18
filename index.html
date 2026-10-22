@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>8 Ball 18 Games</title>
-    <link rel="icon" type="image/png" href="18_game_favicon.png">
+  <link rel="icon" type="image/png" href="18_game_favicon.png">
 
     <script>
         const CENTRAL_DB_URL = "https://script.google.com/macros/s/AKfycbwvrWSoCLe6e1OfqsPB-dvpVi8eQ70U_eEXQWuSaoimRz1-X3WsH9D9-IL5uyCS1jic/exec";
@@ -38,7 +38,7 @@
         }
         header h1 { font-size: 0.9rem; margin: 0; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
         
-        .header-btns { display: flex; gap: 10px; align-items: center; }
+        .header-btns { display: flex; gap: 15px; align-items: center; }
         .reset-btn, .help-trigger { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; margin: 0; }
         .reset-btn { position: relative; z-index: 1001; pointer-events: auto !important; }
         .start-btn {
@@ -53,19 +53,6 @@
             text-transform: uppercase;
         }
 
-        .update-notice-btn {
-            background: #38bdf8;
-            color: #020617;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            display: none;
-        }
-
         .help-trigger { font-size: 1.4rem; color: var(--gold); }
         .stats-link-btn { background: var(--gold); color: black; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-decoration: none; display: none; }
 
@@ -76,19 +63,20 @@
         }
 
         #update-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 3000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
 
+        
         .modal-content {
             background: var(--slate); border: 2px solid var(--gold);
             border-radius: 12px; padding: 20px; max-width: 500px; margin: 0 auto;
@@ -242,7 +230,7 @@
             height: 38px;
         }
 
-        .btn-submit { 
+                .btn-submit { 
             background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); 
             color: #0f172a; 
             border: 1px solid #fde047; 
@@ -260,6 +248,7 @@
         .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(251, 191, 36, 0.35); }
         .btn-submit:active { transform: translateY(1px); }
         .btn-submit.loading { opacity: 0.8; pointer-events: none; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; } 
+
 
         .site-footer {
             background: #020617;
@@ -335,20 +324,31 @@
     </div>
 </div>
 
-<!-- UPDATE BROADCAST MODAL WITH SWITCHER -->
+<!-- UPDATE BROADCAST MODAL -->
 <div id="update-modal">
     <div class="modal-content">
-        <div id="modal-tab-group" style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <button type="button" id="tab-local-btn" onclick="switchNoticeTab('local')" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--gold); background:var(--gold); color:black; font-weight:bold; font-size:0.75rem; cursor:pointer;">
-                🏠 Local League
-            </button>
-            <button type="button" id="tab-central-btn" onclick="switchNoticeTab('central')" style="flex:1; padding:6px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:white; font-weight:bold; font-size:0.75rem; cursor:pointer;">
-                🌐 Central DB
-            </button>
-        </div>
         <h2 id="update-modal-title">📢 App Announcement</h2>
         <p id="update-modal-text">Checking for updates...</p>
         <button type="button" class="help-close" onclick="closeUpdateModal()">GOT IT!</button>
+    </div>
+</div>
+    
+<div id="match-picker-modal">
+    <div class="modal-content">
+        <h2>Select Match Schedule</h2>
+        <p>Choose your game date and match details below, or click cancel to enter teams manually.</p>
+        <div class="modal-select-group">
+            <label for="popup-week-selector">Match Date</label>
+            <select id="popup-week-selector" onchange="updatePopupMatchupList()"></select>
+        </div>
+        <div class="modal-select-group">
+            <label for="popup-match-selector">Select Match</label>
+            <select id="popup-match-selector"></select>
+        </div>
+        <div class="modal-btn-row">
+            <button type="button" class="modal-btn btn-modal-cancel" onclick="closeMatchPickerModal()">Cancel (Use App Manually)</button>
+            <button type="button" class="modal-btn btn-modal-apply" onclick="applyPopupMatchSelection()">Load Selected Match</button>
+        </div>
     </div>
 </div>
 
@@ -372,7 +372,6 @@
     <div class="header-btns">
         <button type="button" class="reset-btn" onclick="resetBoard()">🗑️</button>
         <button type="button" class="start-btn" onclick="saveSettings()">START</button>
-        <button type="button" id="update-btn" class="update-notice-btn" onclick="reopenLastAnnouncement()">📢 NOTICE</button>
         <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
     </div>
     <h1>8 Ball 18 Games</h1>
@@ -382,6 +381,7 @@
 <details id="setup-panel">
     <summary onclick="handleSetupToggle(event)">⚙️ SETUP: CONFIG & STATS</summary>
     <div class="settings-content">
+        <!-- 6-DIGIT QUICK CONNECT (VISIBILE BY DEFAULT) -->
         <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid var(--gold); margin-bottom: 10px;">
             <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">League Quick-Connect</div>
             <div class="pay-input-group">
@@ -398,6 +398,7 @@
             <span id="status-text">ROSTER: DISCONNECTED</span>
         </div>
 
+        <!-- HIDDEN CONTAINER FOR ALL OTHER SETTINGS -->
         <div id="advanced-settings-container" style="display: none;">
             <input type="text" id="sheet-url" placeholder="Paste Google CSV URL here...">
             <button type="button" id="clear-match-btn" class="btn-clear-match" style="display:none;" onclick="clearSelectedMatch()">❌ CLEAR MATCH SELECTION</button>
@@ -457,7 +458,7 @@
     </button>
     
     <button type="button" id="submit-btn" class="btn-submit" onclick="handleSubmitMatch()">Submit Match</button>
-    <button type="button" id="resend-btn" class="btn-resend" style="display: none;" onclick="handleResendMatch()">📲 Resend Data</button>
+        <button type="button" id="resend-btn" class="btn-resend" style="display: none;" onclick="handleResendMatch()">📲 Resend Data</button>
 
     <div class="score-chip"><span><span id="v-score">0</span></span></div>
 </footer>
@@ -478,7 +479,6 @@
     let homeSignatureData = null;
     let visitingSignatureData = null;
     let currentSigningRole = 'home';
-    let currentNoticeType = 'local';
 
     let state = Array.from({length: 18}, (_, i) => ({
         id: i + 1, h: "", v: "", hTR: false, h8B: false, vTR: false, v8B: false, win: null, hManual: false, vManual: false
@@ -487,8 +487,7 @@
     let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
-        updateNoticeButtonVisibility();
-
+        // Check for updates automatically if a league code is already saved
         const savedCode = localStorage.getItem('league_code');
         if (savedCode) { 
             checkForUpdates(savedCode); 
@@ -600,23 +599,6 @@
         if (payBtnDisplay) payBtnDisplay.innerText = formattedAmount;
     }
 
-    function closeUpdateModal() {
-        document.getElementById('update-modal').style.display = 'none';
-    }
-
-    function reopenLastAnnouncement() {
-        const localMsg = localStorage.getItem('cached_local_msg');
-        const centralMsg = localStorage.getItem('cached_central_msg');
-
-        if (localMsg) {
-            triggerNotice('local');
-        } else if (centralMsg) {
-            triggerNotice('central');
-        } else {
-            alert("No recent updates or announcements found.");
-        }
-    }
-    
     function initSignaturePad() {
         canvas = document.getElementById('sig-canvas');
         ctx = canvas.getContext('2d');
@@ -681,7 +663,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    function handleSubmitMatch() {
+        function handleSubmitMatch() {
         const incompleteGames = state.filter(g => !g.h || !g.v || !g.win);
         if (incompleteGames.length > 0) {
             alert("Please complete match before submitting all 18 Games must be filled in and a winner selected");
@@ -699,6 +681,7 @@
         openSignatureModal();
     }
 
+
     function openSignatureModal() {
         document.getElementById('sig-modal').style.display = 'flex';
         setTimeout(() => {
@@ -707,11 +690,12 @@
         }, 50);
     }
 
-    function closeSignatureModal() {
+                        function closeSignatureModal() {
         document.getElementById('sig-modal').style.display = 'none';
     }
 
-    function confirmSignature() {
+
+       function confirmSignature() {
         const blank = document.createElement('canvas');
         blank.width = canvas.width;
         blank.height = canvas.height;
@@ -745,7 +729,7 @@
         }
     }
 
-    function handleResendMatch() {
+        function handleResendMatch() {
         if (confirm("Are you sure you want to resend the match data?")) {
             const resendBtn = document.getElementById('resend-btn');
             if (resendBtn) {
@@ -757,70 +741,76 @@
         }
     }
 
-    async function proceedToSendText() {
-        const msg = buildMessage();
-        const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
 
-        if (!leagueCode) {
-            alert("Please enter a 6-digit league code before submitting.");
+async function proceedToSendText() {
+    const msg = buildMessage();
+    const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
+
+    if (!leagueCode) {
+        alert("Please enter a 6-digit league code before submitting.");
+        return;
+    }
+
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+        submitBtn.innerText = '⏳ LOOKING UP...';
+        submitBtn.disabled = true;
+        submitBtn.classList.add('loading');
+    }
+
+    try {
+        // 1. Fetch the exact listener webhook URL from Central DB (Column I)
+       const lookupUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(leagueCode)}`;
+        const lookupRes = await fetch(lookupUrl);
+        const lookupData = await lookupRes.json();
+
+        // ✅ FIXED: Check lookupData.webhookUrl to match Central DB
+        if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
+            alert("Could not find a registered listener URL for league code: " + leagueCode);
+            if (submitBtn) {
+                submitBtn.innerText = 'Submit Match';
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+            }
             return;
         }
+       const webhookUrl = lookupData.webhookUrl; // <-- Change listenerUrl to webhookUrl here!
+                // Cache it locally for future quick-reference
+        localStorage.setItem('league_webhook_url', webhookUrl);
 
-        const submitBtn = document.getElementById('submit-btn');
-        if (submitBtn) {
-            submitBtn.innerText = '⏳ LOOKING UP...';
-            submitBtn.disabled = true;
-            submitBtn.classList.add('loading');
-        }
+          if (submitBtn) submitBtn.innerText = '⏳ SENDING...';
 
-        try {
-            const lookupUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(leagueCode)}`;
-            const lookupRes = await fetch(lookupUrl);
-            const lookupData = await lookupRes.json();
 
-            if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
-                alert("Could not find a registered listener URL for league code: " + leagueCode);
-                if (submitBtn) {
-                    submitBtn.innerText = 'Submit Match';
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove('loading');
-                }
-                return;
-            }
-            const webhookUrl = lookupData.webhookUrl;
-            localStorage.setItem('league_webhook_url', webhookUrl);
+        const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
+        const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
+        
+        const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
+        const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
+        
+        const leagueTitle = localStorage.getItem('league_name') || "8 Ball League";
 
-            if (submitBtn) submitBtn.innerText = '⏳ SENDING...';
+        const payloadData = {
+            payload: msg,
+            leagueTitle: leagueTitle,
+            homeTeam: hT,
+            homeScore: hScore,
+            visitTeam: vT,
+            visitScore: vScore,
+            games: state,
+            homeSig: homeSignatureData || '',
+            visitSig: visitingSignatureData || ''
+        };
 
-            const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
-            const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
-            
-            const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
-            const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
-            
-            const leagueTitle = localStorage.getItem('league_name') || "8 Ball League";
-
-            const payloadData = {
-                payload: msg,
-                leagueTitle: leagueTitle,
-                homeTeam: hT,
-                homeScore: hScore,
-                visitTeam: vT,
-                visitScore: vScore,
-                games: state,
-                homeSig: homeSignatureData || '',
-                visitSig: visitingSignatureData || ''
-            };
-
-            await fetch(webhookUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8"
-                },
-                body: JSON.stringify(payloadData)
-            });
-            alert('Match successfully Submitted To Your League Administrator!');
+        // 2. Post match data to the listener sheet's League Matches tab
+        await fetch(webhookUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(payloadData)
+});
+                    alert('Match successfully Submitted To Your League Administrator!');
             if (submitBtn) {
                 submitBtn.innerText = 'Submitted Successfully';
                 submitBtn.disabled = true;
@@ -830,116 +820,85 @@
             const resendBtn = document.getElementById('resend-btn');
             if (resendBtn) resendBtn.style.display = 'block';
 
-        } catch (err) {
-            alert('Error sending match to backend: ' + err.message);
-            if (submitBtn) {
-                submitBtn.innerText = 'Submit Match';
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('loading');
-            }
-        }
-    } 
 
+        } catch (err) {
+        alert('Error sending match to backend: ' + err.message);
+        if (submitBtn) {
+            submitBtn.innerText = 'Submit Match';
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        }
+    }
+} 
     function toggleHelp() {
         const modal = document.getElementById('help-modal');
         modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
     }
 
-    async function checkForUpdates(code) {
-        if (!code) return;
+    function closeUpdateModal() {
+    document.getElementById('update-modal').style.display = 'none';
+}
+   
+async function checkForUpdates(code) {
+    if (!code) return;
 
-        // --- CHANNEL 1: Central DB Updates (Global Network) ---
-        try {
-            const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
-            const centralRes = await fetch(centralUrl);
-            const centralResult = await centralRes.json();
-            
-            if (centralResult.status === 'success' && centralResult.hasUpdate) {
-                localStorage.setItem('cached_central_title', centralResult.updateTitle || "📢 Central Network Announcement");
-                localStorage.setItem('cached_central_msg', centralResult.updateMessage || "");
-
-                const lastSeenCentral = localStorage.getItem('last_seen_central_version');
-                if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
-                    triggerNotice('central');
-                    if (centralResult.versionTag) {
-                        localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Could not fetch Central DB updates:", e);
-        }
-
-        // --- CHANNEL 2: League Listener Sheet Updates (Local League) ---
-        try {
-            const adminListenerUrl = localStorage.getItem('league_webhook_url');
-            if (adminListenerUrl) {
-                const targetUrl = `${adminListenerUrl}?action=getAdminUpdate`;
-                const response = await fetch(targetUrl);
-                const result = await response.json();
-                
-                if (result.status === 'success' && result.hasUpdate) {
-                    localStorage.setItem('cached_local_title', result.updateTitle || "📢 Local League Notice");
-                    localStorage.setItem('cached_local_msg', result.updateMessage || "");
-
-                    const lastSeenVersion = localStorage.getItem('last_seen_update_version');
-                    if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
-                        triggerNotice('local');
-                        if (result.versionTag) {
-                            localStorage.setItem('last_seen_update_version', String(result.versionTag));
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Could not fetch Local Listener updates:", e);
-        }
-
-        updateNoticeButtonVisibility();
-    }
-
-    function updateNoticeButtonVisibility() {
-        const btn = document.getElementById('update-btn');
-        const localMsg = localStorage.getItem('cached_local_msg');
-        const centralMsg = localStorage.getItem('cached_central_msg');
-        if (btn) {
-            btn.style.display = (localMsg || centralMsg) ? 'inline-block' : 'none';
-        }
-    }
-
-    function triggerNotice(type) {
-        currentNoticeType = type;
-        switchNoticeTab(type);
-        document.getElementById('update-modal').style.display = 'flex';
-    }
-
-    function switchNoticeTab(type) {
-        currentNoticeType = type;
-        const localBtn = document.getElementById('tab-local-btn');
-        const centralBtn = document.getElementById('tab-central-btn');
-        const titleEl = document.getElementById('update-modal-title');
-        const textEl = document.getElementById('update-modal-text');
-
-        const localTitle = localStorage.getItem('cached_local_title') || "📢 Local League Notice";
-        const localMsg = localStorage.getItem('cached_local_msg') || "No active local notices.";
+    // --- CHANNEL 1: Central DB Updates (Global Network Announcements) ---
+    try {
+        const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
+        const centralRes = await fetch(centralUrl);
+        const centralResult = await centralRes.json();
         
-        const centralTitle = localStorage.getItem('cached_central_title') || "📢 Central Network Announcement";
-        const centralMsg = localStorage.getItem('cached_central_msg') || "No active central announcements.";
-
-        if (type === 'local') {
-            if (localBtn) { localBtn.style.background = 'var(--gold)'; localBtn.style.color = 'black'; }
-            if (centralBtn) { centralBtn.style.background = '#0f172a'; centralBtn.style.color = 'white'; }
-
-            if (titleEl) titleEl.innerText = localTitle;
-            if (textEl) textEl.innerText = localMsg;
-        } else {
-            if (centralBtn) { centralBtn.style.background = 'var(--gold)'; centralBtn.style.color = 'black'; }
-            if (localBtn) { localBtn.style.background = '#0f172a'; localBtn.style.color = 'white'; }
-
-            if (titleEl) titleEl.innerText = centralTitle;
-            if (textEl) textEl.innerText = centralMsg;
+        if (centralResult.status === 'success' && centralResult.hasUpdate) {
+            const lastSeenCentral = localStorage.getItem('last_seen_central_version');
+            
+            // Check if this central update version hasn't been acknowledged yet
+            if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
+                triggerUpdateModal(
+                    centralResult.updateTitle || "📢 Central Network Announcement", 
+                    centralResult.updateMessage
+                );
+                if (centralResult.versionTag) {
+                    localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
+                }
+            }
         }
+    } catch (e) {
+        console.error("Could not fetch Central DB updates:", e);
     }
+
+    // --- CHANNEL 2: League Listener Sheet Updates (Local League Announcements) ---
+    try {
+        const adminListenerUrl = localStorage.getItem('league_webhook_url');
+        if (adminListenerUrl) {
+            const targetUrl = `${adminListenerUrl}?action=getAdminUpdate`;
+            const response = await fetch(targetUrl);
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.hasUpdate) {
+                const lastSeenVersion = localStorage.getItem('last_seen_update_version');
+                
+                // Check if this local league update version hasn't been acknowledged yet
+                if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
+                    triggerUpdateModal(
+                        result.updateTitle || "📢 Local League Notice", 
+                        result.updateMessage
+                    );
+                    if (result.versionTag) {
+                        localStorage.setItem('last_seen_update_version', String(result.versionTag));
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Could not fetch Local Listener updates:", e);
+    }
+}
+
+function triggerUpdateModal(title, message) {
+    document.getElementById('update-modal-title').innerText = title;
+    document.getElementById('update-modal-text').innerText = message;
+    document.getElementById('update-modal').style.display = 'flex';
+}
 
     async function saveSettings() {
         const rUrl = document.getElementById('sheet-url').value.trim();
@@ -1025,9 +984,11 @@
                 if (result.rosterUrl) fetchRosters(result.rosterUrl, false);
                 if (typeof calculateMatchOwed === 'function') calculateMatchOwed();
 
+                // 1. Automatically close the settings panel (<details>)
                 const setupPanel = document.getElementById('setup-panel');
                 if (setupPanel) setupPanel.open = false;
 
+                // 2. Show the custom connected popup
                 alert(`You are connected to ${result.leagueName} and may proceed to load a match by pressing the start button!`);
                 
                 checkForUpdates(code);
@@ -1039,7 +1000,6 @@
             alert("Failed to connect to central database: " + err.message);
         }
     }
-
     function parseCSV(csvText, showPopup = false) {
         const lines = csvText.split(/\r?\n/);
         const newRosters = {};
