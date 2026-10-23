@@ -885,29 +885,33 @@ async function proceedToSendText() {
 async function checkForUpdates(code) {
     if (!code) return;
 
-    // --- CHANNEL 1: Central DB Updates (Global) ---
-    try {
-        const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
-        const centralRes = await fetch(centralUrl);
-        const centralResult = await centralRes.json();
+   // --- CHANNEL 1: Central DB Updates (Global) ---
+try {
+    const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
+    const centralRes = await fetch(centralUrl);
+    const centralResult = await centralRes.json();
+    
+    if (centralResult.status === 'success' && centralResult.hasUpdate) {
+        // Enforce the standard Global title across both files
+        const gTitle = "📢 Global App Announcement"; 
+        const gMsg = centralResult.updateMessage || "";
         
-        if (centralResult.status === 'success' && centralResult.hasUpdate) {
-            const gTitle = centralResult.updateTitle || "📢 Central Network Announcement";
-            const gMsg = centralResult.updateMessage || "";
-            
-            // SAVE TEXT TO CACHE
-            localStorage.setItem('cached_global_title', gTitle);
-            localStorage.setItem('cached_global_msg', gMsg);
+        // Save text to cache so landing page (index.html) reads the exact same title
+        localStorage.setItem('cached_global_title', gTitle);
+        localStorage.setItem('cached_global_msg', gMsg);
 
-            const lastSeenCentral = localStorage.getItem('last_seen_central_version');
-            if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
-                triggerUpdateModal(gTitle, gMsg);
-                if (centralResult.versionTag) {
-                    localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
-                }
+        const lastSeenCentral = localStorage.getItem('last_seen_central_version');
+        if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
+            // Show modal in 8ball-18.html with the fixed Global title
+            triggerUpdateModal(gTitle, gMsg);
+            if (centralResult.versionTag) {
+                localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
             }
         }
-    } catch (e) { console.error("Central DB updates error:", e); }
+    }
+} catch (e) { 
+    console.error("Central DB updates error:", e); 
+}
 
     // --- CHANNEL 2: Listener Sheet Updates (League) ---
 try {
