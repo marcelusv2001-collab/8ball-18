@@ -608,7 +608,7 @@
             }
         });
 
-        // 1. GLOBAL APP ANNOUNCEMENT (Fetches from Central DB with local cache recall)
+        // 1. GLOBAL APP ANNOUNCEMENT (Fetches from Central DB global row/code with local cache recall)
         async function fetchGlobalAnnouncement() {
             const cachedTitle = localStorage.getItem('cached_global_title');
             const cachedMsg = localStorage.getItem('cached_global_msg');
@@ -620,8 +620,8 @@
             }
 
             try {
-                const savedCode = localStorage.getItem('league_code') || "482910";
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(savedCode)}`);
+                const globalCode = "482910"; // Central DB Global reference code
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(globalCode)}`);
                 const data = await res.json();
 
                 if (data.status === 'success') {
@@ -638,56 +638,58 @@
             }
         }
 
-        // 2. INDIVIDUAL LEAGUE ANNOUNCEMENT (Fetches from League Webhook Listener Sheet with local cache recall)
+        // 2. INDIVIDUAL LEAGUE ANNOUNCEMENT (Fetches from that league code's receiver sheet via getAdminUpdate)
         async function fetchLeagueAnnouncement() {
+            let code = localStorage.getItem('league_code');
+            if (!code) {
+                code = prompt("Please enter your 6-digit League Code to view your individual league announcement:");
+                if (!code || code.length !== 6) {
+                    alert("A valid 6-digit league code is required.");
+                    return;
+                }
+                localStorage.setItem('league_code', code);
+            }
+
             const cachedTitle = localStorage.getItem('cached_league_title');
             const cachedMsg = localStorage.getItem('cached_league_msg');
 
             if (cachedTitle && cachedMsg) {
                 showAnnouncementModal(cachedTitle, cachedMsg);
             } else {
-                showAnnouncementModal("🏆 Individual League Announcement", "Connecting to your league listener sheet...");
+                showAnnouncementModal("🏆 Individual League Announcement", "Locating league receiver sheet...");
             }
 
-            let webhookUrl = localStorage.getItem('league_webhook_url');
-            let code = localStorage.getItem('league_code');
-
             try {
-                if (!webhookUrl) {
-                    if (!code) {
-                        code = prompt("Please enter your 6-digit League Code:");
-                        if (!code || code.length !== 6) return;
-                        localStorage.setItem('league_code', code);
-                    }
-                    const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
-                    const configData = await configRes.json();
-                    if (configData.status === 'success' && configData.webhookUrl) {
-                        webhookUrl = configData.webhookUrl;
-                        localStorage.setItem('league_webhook_url', webhookUrl);
-                    }
-                }
+                // Step A: Look up the league's receiver/listener sheet webhook URL from Central DB
+                const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
+                const configData = await configRes.json();
 
-                if (!webhookUrl) {
-                    showAnnouncementModal("🏆 League Announcement", "No listener webhook found. Sync your 6-digit code in the app setup menu first.");
+                if (configData.status !== 'success' || !configData.webhookUrl) {
+                    showAnnouncementModal("🏆 League Notice", "League code not found or no listener webhook registered in Central Database.");
                     return;
                 }
 
-                const targetUrl = `${webhookUrl}?action=getAdminUpdate`;
+                const leagueWebhookUrl = configData.webhookUrl;
+                localStorage.setItem('league_webhook_url', leagueWebhookUrl);
+
+                // Step B: Fetch the announcement directly from that league's receiver/listener sheet endpoint
+                const targetUrl = `${leagueWebhookUrl}?action=getAdminUpdate`;
                 const res = await fetch(targetUrl);
                 const data = await res.json();
 
-                if (data.status === 'success') {
-                    const title = data.updateTitle || "📢 Local League Notice";
-                    const msg = data.updateMessage || "No active notices found for your league sheet.";
+                if (data.status === 'success' && data.hasUpdate) {
+                    const title = data.updateTitle || `📢 League Notice (${configData.leagueName || code})`;
+                    const msg = data.updateMessage || "No active notices found on your league receiver sheet.";
+                    
                     localStorage.setItem('cached_league_title', title);
                     localStorage.setItem('cached_league_msg', msg);
                     showAnnouncementModal(title, msg);
                 } else if (!cachedTitle) {
-                    showAnnouncementModal("🏆 League Notice", "No active notices flagged on your league sheet.");
+                    showAnnouncementModal("🏆 League Notice", "No active flagged notices found on your league's receiver sheet.");
                 }
             } catch (e) {
                 if (!cachedTitle) {
-                    showAnnouncementModal("🏆 League Notice", "Could not reach your league listener sheet. Check your network or web app deployment.");
+                    showAnnouncementModal("Error", "Could not connect to your individual league's receiver sheet.");
                 }
             }
         }
