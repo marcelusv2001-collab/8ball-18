@@ -438,8 +438,8 @@
                     📢 Notices ▾
                 </button>
                 <div class="dropdown-content" id="announce-dropdown-menu">
-                    <a href="javascript:void(0)" onclick="fetchGlobalAnnouncement()">📢 Global App Announcements</a>
-                    <a href="javascript:void(0)" onclick="fetchLeagueAnnouncement()">🏆 Individual League Announcement</a>
+                    <a href="javascript:void(0)" onclick="showGlobalNoticeFromCache()">📢 Global App Announcements</a>
+                    <a href="javascript:void(0)" onclick="showLeagueNoticeFromCache()">🏆 Individual League Announcement</a>
                 </div>
             </div>
         </nav>
@@ -588,8 +588,6 @@
     </footer>
 
     <script>
-        const CENTRAL_DB_URL = "https://script.google.com/macros/s/AKfycbwvrWSoCLe6e1OfqsPB-dvpVi8eQ70U_eEXQWuSaoimRz1-X3WsH9D9-IL5uyCS1jic/exec";
-
         function launchScorekeeperApp() {
             localStorage.setItem('has_visited_8ball18', 'true');
             window.location.href = '8ball-18.html';
@@ -608,101 +606,23 @@
             }
         });
 
-        // 1. GLOBAL APP ANNOUNCEMENT (Fetches from Central DB using active 6-digit league code)
-        async function fetchGlobalAnnouncement() {
-            let code = localStorage.getItem('league_code');
-            if (!code) {
-                code = prompt("Please enter your 6-digit League Code to view global announcements:");
-                if (!code || code.length !== 6) {
-                    alert("A valid 6-digit league code is required.");
-                    return;
-                }
-                localStorage.setItem('league_code', code);
-            }
-
-            const cachedTitle = localStorage.getItem('cached_global_title');
-            const cachedMsg = localStorage.getItem('cached_global_msg');
-
-            if (cachedTitle && cachedMsg) {
-                showAnnouncementModal(cachedTitle, cachedMsg);
-            } else {
-                showAnnouncementModal("📢 Global App Announcement", "Checking Central Database...");
-            }
-
-            try {
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
-                const data = await res.json();
-
-                if (data.status === 'success') {
-                    const title = data.updateTitle || "📢 Global App Announcement";
-                    const msg = data.updateMessage || "No active global announcements at this time.";
-                    localStorage.setItem('cached_global_title', title);
-                    localStorage.setItem('cached_global_msg', msg);
-                    showAnnouncementModal(title, msg);
-                } else {
-                    showAnnouncementModal("📢 Global App Announcement", "League code not found in Central Database.");
-                }
-            } catch (e) {
-                if (!cachedTitle) {
-                    showAnnouncementModal("📢 Global App Announcement", "Could not connect to the Central Database.");
-                }
-            }
+        // Pull Global Notice Directly from Storage Flags
+        function showGlobalNoticeFromCache() {
+            const title = localStorage.getItem('cached_global_title') || "📢 Global App Announcement";
+            const msg = localStorage.getItem('cached_global_msg') || "No global announcements have been flagged yet on this device.";
+            showAnnouncementModal(title, msg);
         }
 
-        // 2. INDIVIDUAL LEAGUE ANNOUNCEMENT (Fetches directly from that league code's listener webhook sheet)
-        async function fetchLeagueAnnouncement() {
-            let code = localStorage.getItem('league_code');
-            if (!code) {
-                code = prompt("Please enter your 6-digit League Code to view your individual league announcement:");
-                if (!code || code.length !== 6) {
-                    alert("A valid 6-digit league code is required.");
-                    return;
-                }
-                localStorage.setItem('league_code', code);
-            }
-
-            const cachedTitle = localStorage.getItem('cached_league_title');
-            const cachedMsg = localStorage.getItem('cached_league_msg');
-
-            if (cachedTitle && cachedMsg) {
-                showAnnouncementModal(cachedTitle, cachedMsg);
-            } else {
-                showAnnouncementModal("🏆 Individual League Announcement", "Locating league receiver sheet...");
-            }
-
-            try {
-                // Step A: Look up the league's receiver/listener sheet webhook URL from Central DB
-                const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
-                const configData = await configRes.json();
-
-                if (configData.status !== 'success' || !configData.webhookUrl) {
-                    showAnnouncementModal("🏆 League Notice", "League code not found or no listener webhook registered in Central Database.");
-                    return;
-                }
-
-                const leagueWebhookUrl = configData.webhookUrl;
-                localStorage.setItem('league_webhook_url', leagueWebhookUrl);
-
-                // Step B: Fetch the announcement directly from that league's listener sheet endpoint
-                const targetUrl = `${leagueWebhookUrl}?action=getAdminUpdate`;
-                const res = await fetch(targetUrl);
-                const data = await res.json();
-
-                if (data.status === 'success' && data.hasUpdate) {
-                    const title = data.updateTitle || `📢 League Notice (${configData.leagueName || code})`;
-                    const msg = data.updateMessage || "No active notices found on your league receiver sheet.";
-                    
-                    localStorage.setItem('cached_league_title', title);
-                    localStorage.setItem('cached_league_msg', msg);
-                    showAnnouncementModal(title, msg);
-                } else if (!cachedTitle) {
-                    showAnnouncementModal("🏆 League Notice", "No active flagged notices found on your league's receiver sheet.");
-                }
-            } catch (e) {
-                if (!cachedTitle) {
-                    showAnnouncementModal("Error", "Could not connect to your individual league's receiver sheet.");
-                }
-            }
+        // Pull League Notice Directly from Storage Flags
+        function showLeagueNoticeFromCache() {
+            const leagueName = localStorage.getItem('league_name');
+            const code = localStorage.getItem('league_code');
+            const defaultTitle = leagueName ? `📢 League Notice (${leagueName})` : (code ? `📢 League Notice (${code})` : "🏆 Individual League Announcement");
+            
+            const title = localStorage.getItem('cached_league_title') || defaultTitle;
+            const msg = localStorage.getItem('cached_league_msg') || "No league notices have been flagged yet on this device. Sync your league inside the app to check for updates.";
+            
+            showAnnouncementModal(title, msg);
         }
 
         function showAnnouncementModal(title, text) {
