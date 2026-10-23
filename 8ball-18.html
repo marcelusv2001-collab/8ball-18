@@ -892,14 +892,16 @@ async function checkForUpdates(code) {
         const centralResult = await centralRes.json();
         
         if (centralResult.status === 'success' && centralResult.hasUpdate) {
-            const lastSeenCentral = localStorage.getItem('last_seen_central_version');
+            const gTitle = centralResult.updateTitle || "📢 Central Network Announcement";
+            const gMsg = centralResult.updateMessage;
             
-            // Check if this central update version hasn't been acknowledged yet
+            // Save text to cache so landing page can read it instantly
+            localStorage.setItem('cached_global_title', gTitle);
+            localStorage.setItem('cached_global_msg', gMsg);
+
+            const lastSeenCentral = localStorage.getItem('last_seen_central_version');
             if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
-                triggerUpdateModal(
-                    centralResult.updateTitle || "📢 Central Network Announcement", 
-                    centralResult.updateMessage
-                );
+                triggerUpdateModal(gTitle, gMsg);
                 if (centralResult.versionTag) {
                     localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
                 }
@@ -918,14 +920,16 @@ async function checkForUpdates(code) {
             const result = await response.json();
             
             if (result.status === 'success' && result.hasUpdate) {
+                const lTitle = result.updateTitle || "📢 Local League Notice";
+                const lMsg = result.updateMessage;
+
+                // Save text to cache so landing page can read it instantly
+                localStorage.setItem('cached_league_title', lTitle);
+                localStorage.setItem('cached_league_msg', lMsg);
+
                 const lastSeenVersion = localStorage.getItem('last_seen_update_version');
-                
-                // Check if this local league update version hasn't been acknowledged yet
                 if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
-                    triggerUpdateModal(
-                        result.updateTitle || "📢 Local League Notice", 
-                        result.updateMessage
-                    );
+                    triggerUpdateModal(lTitle, lMsg);
                     if (result.versionTag) {
                         localStorage.setItem('last_seen_update_version', String(result.versionTag));
                     }
@@ -936,6 +940,7 @@ async function checkForUpdates(code) {
         console.error("Could not fetch Local Listener updates:", e);
     }
 }
+
 
 function triggerUpdateModal(title, message) {
     document.getElementById('update-modal-title').innerText = title;
