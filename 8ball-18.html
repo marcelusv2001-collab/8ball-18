@@ -910,32 +910,38 @@ async function checkForUpdates(code) {
     } catch (e) { console.error("Central DB updates error:", e); }
 
     // --- CHANNEL 2: Listener Sheet Updates (League) ---
-    try {
-        const adminListenerUrl = localStorage.getItem('league_webhook_url');
-        if (adminListenerUrl) {
-            const response = await fetch(`${adminListenerUrl}?action=getAdminUpdate`);
-            const result = await response.json();
+try {
+    const adminListenerUrl = localStorage.getItem('league_webhook_url');
+    if (adminListenerUrl) {
+        const response = await fetch(`${adminListenerUrl}?action=getAdminUpdate`);
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.hasUpdate) {
+            // Pull the saved league name (or default to code/generic)
+            const leagueName = localStorage.getItem('league_name');
+            const lTitle = leagueName 
+                ? `🏆 ${leagueName} Announcement` 
+                : (result.updateTitle || "📢 Local League Notice");
             
-            if (result.status === 'success' && result.hasUpdate) {
-                const lTitle = result.updateTitle || "📢 Local League Notice";
-                const lMsg = result.updateMessage || "";
+            const lMsg = result.updateMessage || "";
 
-                // SAVE TEXT TO CACHE
-                localStorage.setItem('cached_league_title', lTitle);
-                localStorage.setItem('cached_league_msg', lMsg);
+            // Save text to cache so landing page (index.html) reads the exact same title
+            localStorage.setItem('cached_league_title', lTitle);
+            localStorage.setItem('cached_league_msg', lMsg);
 
-                const lastSeenVersion = localStorage.getItem('last_seen_update_version');
-                if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
-                    triggerUpdateModal(lTitle, lMsg);
-                    if (result.versionTag) {
-                        localStorage.setItem('last_seen_update_version', String(result.versionTag));
-                    }
+            const lastSeenVersion = localStorage.getItem('last_seen_update_version');
+            if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
+                // Show modal in 8ball-18.html with the league name title
+                triggerUpdateModal(lTitle, lMsg);
+                if (result.versionTag) {
+                    localStorage.setItem('last_seen_update_version', String(result.versionTag));
                 }
             }
         }
-    } catch (e) { console.error("Local Listener updates error:", e); }
+    }
+} catch (e) { 
+    console.error("Local Listener updates error:", e); 
 }
-
 
 
 function triggerUpdateModal(title, message) {
