@@ -609,18 +609,31 @@
         });
 
         async function fetchGlobalAnnouncement() {
-            showAnnouncementModal("📢 Global App Announcements", "Connecting to central network...");
+            // Pull the last flagged notice from storage if available
+            const cachedTitle = localStorage.getItem('cached_global_title');
+            const cachedMsg = localStorage.getItem('cached_global_msg');
+
+            if (cachedTitle && cachedMsg) {
+                showAnnouncementModal(cachedTitle, cachedMsg);
+            } else {
+                showAnnouncementModal("📢 Global App Announcements", "Checking for latest flagged notice...");
+            }
+
             try {
                 const savedCode = localStorage.getItem('league_code') || "482910";
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${savedCode}`);
                 const data = await res.json();
-                if (data.status === 'success') {
-                    showAnnouncementModal(data.updateTitle || "📢 Global App Announcement", data.updateMessage || "No active global announcements at this time.");
-                } else {
-                    showAnnouncementModal("📢 Global App Announcement", "Welcome to 8 Ball 18 Games! Platform version v1.0 is fully operational.");
+                if (data.status === 'success' && data.hasUpdate) {
+                    const title = data.updateTitle || "📢 Global App Announcement";
+                    const msg = data.updateMessage || "No active global announcements at this time.";
+                    localStorage.setItem('cached_global_title', title);
+                    localStorage.setItem('cached_global_msg', msg);
+                    showAnnouncementModal(title, msg);
                 }
             } catch (e) {
-                showAnnouncementModal("📢 Global App Announcement", "Welcome to 8 Ball 18 Games! All systems are online and running smoothly.");
+                if (!cachedTitle) {
+                    showAnnouncementModal("📢 Global App Announcement", "Welcome to 8 Ball 18 Games! All systems are online.");
+                }
             }
         }
 
@@ -635,18 +648,32 @@
                 localStorage.setItem('league_code', code);
             }
 
-            showAnnouncementModal("🏆 Individual League Announcement", "Fetching notice for league code: " + code + "...");
+            // Pull the last flagged notice from storage if available
+            const cachedTitle = localStorage.getItem('cached_league_title');
+            const cachedMsg = localStorage.getItem('cached_league_msg');
+
+            if (cachedTitle && cachedMsg) {
+                showAnnouncementModal(cachedTitle, cachedMsg);
+            } else {
+                showAnnouncementModal("🏆 Individual League Announcement", "Fetching last flagged notice for league code: " + code + "...");
+            }
             
             try {
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${code}`);
                 const data = await res.json();
-                if (data.status === 'success') {
-                    showAnnouncementModal(data.updateTitle || `📢 League Notice (${data.leagueName || code})`, data.updateMessage || "No active league notices found for your team right now.");
-                } else {
-                    showAnnouncementModal("🏆 League Notice", "League code not found in Central Database. Please re-sync inside your scorekeeper app setup menu.");
+                if (data.status === 'success' && data.hasUpdate) {
+                    const title = data.updateTitle || `📢 League Notice (${data.leagueName || code})`;
+                    const msg = data.updateMessage || "No active league notices found.";
+                    localStorage.setItem('cached_league_title', title);
+                    localStorage.setItem('cached_league_msg', msg);
+                    showAnnouncementModal(title, msg);
+                } else if (!cachedTitle) {
+                    showAnnouncementModal("🏆 League Notice", "No flagged notices found for this league code.");
                 }
             } catch (e) {
-                showAnnouncementModal("Error", "Could not connect to the Central Database to retrieve your league announcement.");
+                if (!cachedTitle) {
+                    showAnnouncementModal("Error", "Could not connect to the Central Database.");
+                }
             }
         }
 
