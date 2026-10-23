@@ -467,6 +467,7 @@
         
         <div class="settings-btns">
             <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
+              <button type="button" class="btn-clear" onclick="returnToLanding()" style="background: #1e293b; color: var(--gold); border: 1px solid var(--gold);">🏠 LANDING PAGE</button>
         </div>
     </div>
 </details>
@@ -570,6 +571,11 @@
         }
     }
 
+function returnToLanding() {
+    localStorage.removeItem('has_visited_8ball18');
+    window.location.href = 'index.html';
+}
+ 
     function saveMatchState() {
         const hTeam = document.getElementById('h-team').value;
         const vTeam = document.getElementById('v-team').value;
