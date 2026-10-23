@@ -885,67 +885,69 @@ async function proceedToSendText() {
 async function checkForUpdates(code) {
     if (!code) return;
 
-   // --- CHANNEL 1: Central DB Updates (Global) ---
-try {
-    const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
-    const centralRes = await fetch(centralUrl);
-    const centralResult = await centralRes.json();
-    
-    if (centralResult.status === 'success' && centralResult.hasUpdate) {
-        // Enforce the standard Global title across both files
-        const gTitle = "📢 Global App Announcement"; 
-        const gMsg = centralResult.updateMessage || "";
+    // --- CHANNEL 1: Central DB Updates (Global) ---
+    try {
+        const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
+        const centralRes = await fetch(centralUrl);
+        const centralResult = await centralRes.json();
         
-        // Save text to cache so landing page (index.html) reads the exact same title
-        localStorage.setItem('cached_global_title', gTitle);
-        localStorage.setItem('cached_global_msg', gMsg);
-
-        const lastSeenCentral = localStorage.getItem('last_seen_central_version');
-        if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
-            // Show modal in 8ball-18.html with the fixed Global title
-            triggerUpdateModal(gTitle, gMsg);
-            if (centralResult.versionTag) {
-                localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
-            }
-        }
-    }
-} catch (e) { 
-    console.error("Central DB updates error:", e); 
-}
-
-    // --- CHANNEL 2: Listener Sheet Updates (League) ---
-try {
-    const adminListenerUrl = localStorage.getItem('league_webhook_url');
-    if (adminListenerUrl) {
-        const response = await fetch(`${adminListenerUrl}?action=getAdminUpdate`);
-        const result = await response.json();
-        
-        if (result.status === 'success' && result.hasUpdate) {
-            // Pull the saved league name (or default to code/generic)
-            const leagueName = localStorage.getItem('league_name');
-            const lTitle = leagueName 
-                ? `🏆 ${leagueName} Announcement` 
-                : (result.updateTitle || "📢 Local League Notice");
+        if (centralResult.status === 'success' && centralResult.hasUpdate) {
+            // Enforce the standard Global title across both files
+            const gTitle = "📢 Global App Announcement"; 
+            const gMsg = centralResult.updateMessage || "";
             
-            const lMsg = result.updateMessage || "";
-
             // Save text to cache so landing page (index.html) reads the exact same title
-            localStorage.setItem('cached_league_title', lTitle);
-            localStorage.setItem('cached_league_msg', lMsg);
+            localStorage.setItem('cached_global_title', gTitle);
+            localStorage.setItem('cached_global_msg', gMsg);
 
-            const lastSeenVersion = localStorage.getItem('last_seen_update_version');
-            if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
-                // Show modal in 8ball-18.html with the league name title
-                triggerUpdateModal(lTitle, lMsg);
-                if (result.versionTag) {
-                    localStorage.setItem('last_seen_update_version', String(result.versionTag));
+            const lastSeenCentral = localStorage.getItem('last_seen_central_version');
+            if (!lastSeenCentral || lastSeenCentral !== String(centralResult.versionTag)) {
+                // Show modal in 8ball-18.html with the fixed Global title
+                triggerUpdateModal(gTitle, gMsg);
+                if (centralResult.versionTag) {
+                    localStorage.setItem('last_seen_central_version', String(centralResult.versionTag));
                 }
             }
         }
+    } catch (e) { 
+        console.error("Central DB updates error:", e); 
     }
-} catch (e) { 
-    console.error("Local Listener updates error:", e); 
+
+    // --- CHANNEL 2: Listener Sheet Updates (League) ---
+    try {
+        const adminListenerUrl = localStorage.getItem('league_webhook_url');
+        if (adminListenerUrl) {
+            const response = await fetch(`${adminListenerUrl}?action=getAdminUpdate`);
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.hasUpdate) {
+                // Pull the saved league name (or default to code/generic)
+                const leagueName = localStorage.getItem('league_name');
+                const lTitle = leagueName 
+                    ? `🏆 ${leagueName} Announcement` 
+                    : (result.updateTitle || "📢 Local League Notice");
+                
+                const lMsg = result.updateMessage || "";
+
+                // Save text to cache so landing page (index.html) reads the exact same title
+                localStorage.setItem('cached_league_title', lTitle);
+                localStorage.setItem('cached_league_msg', lMsg);
+
+                const lastSeenVersion = localStorage.getItem('last_seen_update_version');
+                if (!lastSeenVersion || lastSeenVersion !== String(result.versionTag)) {
+                    // Show modal in 8ball-18.html with the league name title
+                    triggerUpdateModal(lTitle, lMsg);
+                    if (result.versionTag) {
+                        localStorage.setItem('last_seen_update_version', String(result.versionTag));
+                    }
+                }
+            }
+        }
+    } catch (e) { 
+        console.error("Local Listener updates error:", e); 
+    }
 }
+
 
 
 function triggerUpdateModal(title, message) {
