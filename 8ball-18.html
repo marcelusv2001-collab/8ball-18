@@ -885,7 +885,7 @@ async function proceedToSendText() {
 async function checkForUpdates(code) {
     if (!code) return;
 
-    // --- CHANNEL 1: Central DB Updates (Global Network Announcements) ---
+    // --- CHANNEL 1: Central DB Updates (Global) ---
     try {
         const centralUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`;
         const centralRes = await fetch(centralUrl);
@@ -893,9 +893,9 @@ async function checkForUpdates(code) {
         
         if (centralResult.status === 'success' && centralResult.hasUpdate) {
             const gTitle = centralResult.updateTitle || "📢 Central Network Announcement";
-            const gMsg = centralResult.updateMessage;
+            const gMsg = centralResult.updateMessage || "";
             
-            // Save text to cache so landing page can read it instantly
+            // SAVE TEXT TO CACHE
             localStorage.setItem('cached_global_title', gTitle);
             localStorage.setItem('cached_global_msg', gMsg);
 
@@ -907,23 +907,20 @@ async function checkForUpdates(code) {
                 }
             }
         }
-    } catch (e) {
-        console.error("Could not fetch Central DB updates:", e);
-    }
+    } catch (e) { console.error("Central DB updates error:", e); }
 
-    // --- CHANNEL 2: League Listener Sheet Updates (Local League Announcements) ---
+    // --- CHANNEL 2: Listener Sheet Updates (League) ---
     try {
         const adminListenerUrl = localStorage.getItem('league_webhook_url');
         if (adminListenerUrl) {
-            const targetUrl = `${adminListenerUrl}?action=getAdminUpdate`;
-            const response = await fetch(targetUrl);
+            const response = await fetch(`${adminListenerUrl}?action=getAdminUpdate`);
             const result = await response.json();
             
             if (result.status === 'success' && result.hasUpdate) {
                 const lTitle = result.updateTitle || "📢 Local League Notice";
-                const lMsg = result.updateMessage;
+                const lMsg = result.updateMessage || "";
 
-                // Save text to cache so landing page can read it instantly
+                // SAVE TEXT TO CACHE
                 localStorage.setItem('cached_league_title', lTitle);
                 localStorage.setItem('cached_league_msg', lMsg);
 
@@ -936,10 +933,9 @@ async function checkForUpdates(code) {
                 }
             }
         }
-    } catch (e) {
-        console.error("Could not fetch Local Listener updates:", e);
-    }
+    } catch (e) { console.error("Local Listener updates error:", e); }
 }
+
 
 
 function triggerUpdateModal(title, message) {
