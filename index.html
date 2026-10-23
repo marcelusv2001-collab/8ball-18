@@ -638,55 +638,69 @@
             }
         }
 
-        // Pull League Notice: Check Cache First -> Network Fallback
-        async function showLeagueNoticeFromCache() {
-            let title = localStorage.getItem('cached_league_title');
-            let msg = localStorage.getItem('cached_league_msg');
+        // Pull League Notice: Check Cache First -> Network Fallback with Dynamic League Title
+async function showLeagueNoticeFromCache() {
+    const leagueName = localStorage.getItem('league_name');
+    const code = localStorage.getItem('league_code');
 
-            // 1. Instant Cache Display
-            if (title && msg) {
-                showAnnouncementModal(title, msg);
-                return;
-            }
+    // Builds distinct title using League Name (e.g., "🏆 Mom's League Announcement") or League Code
+    const dynamicLeagueTitle = leagueName 
+        ? `🏆 ${leagueName} Announcement` 
+        : (code ? `🏆 League ${code} Announcement` : "🏆 Individual League Announcement");
 
-            // 2. Automatic Fallback Fetch if Cache Empty
-            let code = localStorage.getItem('league_code');
-            if (!code) {
-                code = prompt("Please enter your 6-digit League Code:");
-                if (!code || code.length !== 6) return;
-                localStorage.setItem('league_code', code);
-            }
+    let msg = localStorage.getItem('cached_league_msg');
 
-            showAnnouncementModal("🏆 Individual League Announcement", "Fetching league announcement...");
+    // 1. Instant Cache Display
+    if (msg) {
+        showAnnouncementModal(dynamicLeagueTitle, msg);
+        return;
+    }
 
-            try {
-                let webhookUrl = localStorage.getItem('league_webhook_url');
-                if (!webhookUrl) {
-                    const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
-                    const configData = await configRes.json();
-                    if (configData.status === 'success' && configData.webhookUrl) {
-                        webhookUrl = configData.webhookUrl;
-                        localStorage.setItem('league_webhook_url', webhookUrl);
-                    }
+    // 2. Automatic Fallback Fetch if Cache Empty
+    if (!code) {
+        const userCode = prompt("Please enter your 6-digit League Code:");
+        if (!userCode || userCode.length !== 6) return;
+        localStorage.setItem('league_code', userCode);
+    }
+
+    const currentCode = localStorage.getItem('league_code');
+    showAnnouncementModal(dynamicLeagueTitle, "Fetching league announcement...");
+
+    try {
+        let webhookUrl = localStorage.getItem('league_webhook_url');
+        if (!webhookUrl) {
+            const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(currentCode)}`);
+            const configData = await configRes.json();
+            if (configData.status === 'success' && configData.webhookUrl) {
+                webhookUrl = configData.webhookUrl;
+                localStorage.setItem('league_webhook_url', webhookUrl);
+                if (configData.leagueName) {
+                    localStorage.setItem('league_name', configData.leagueName);
                 }
-
-                if (webhookUrl) {
-                    const res = await fetch(`${webhookUrl}?action=getAdminUpdate`);
-                    const data = await res.json();
-                    if (data.status === 'success' && data.hasUpdate) {
-                        title = data.updateTitle || "📢 League Notice";
-                        msg = data.updateMessage || "No active league notices right now.";
-                        localStorage.setItem('cached_league_title', title);
-                        localStorage.setItem('cached_league_msg', msg);
-                        showAnnouncementModal(title, msg);
-                        return;
-                    }
-                }
-                showAnnouncementModal("🏆 League Notice", "No active flagged notices found on your league sheet.");
-            } catch (e) {
-                showAnnouncementModal("Error", "Could not reach league announcement listener.");
             }
         }
+
+        if (webhookUrl) {
+            const res = await fetch(`${webhookUrl}?action=getAdminUpdate`);
+            const data = await res.json();
+            if (data.status === 'success' && data.hasUpdate) {
+                msg = data.updateMessage || "No active league notices right now.";
+                
+                const finalName = localStorage.getItem('league_name');
+                const finalTitle = finalName ? `🏆 ${finalName} Announcement` : dynamicLeagueTitle;
+
+                localStorage.setItem('cached_league_title', finalTitle);
+                localStorage.setItem('cached_league_msg', msg);
+                showAnnouncementModal(finalTitle, msg);
+                return;
+            }
+        }
+        showAnnouncementModal(dynamicLeagueTitle, "No active flagged notices found on your league sheet.");
+    } catch (e) {
+        showAnnouncementModal(dynamicLeagueTitle, "Could not reach league announcement listener.");
+    }
+}
+
 
         function showAnnouncementModal(title, text) {
             document.getElementById('announcement-title').innerText = title;
