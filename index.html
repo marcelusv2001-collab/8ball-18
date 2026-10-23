@@ -606,14 +606,14 @@
             }
         });
 
-        // Pull Global Notice Directly from Storage Flags
+        // Pull Global Notice Directly from Storage Cache
         function showGlobalNoticeFromCache() {
             const title = localStorage.getItem('cached_global_title') || "📢 Global App Announcement";
             const msg = localStorage.getItem('cached_global_msg') || "No global announcements have been flagged yet on this device.";
             showAnnouncementModal(title, msg);
         }
 
-        // Pull League Notice Directly from Storage Flags
+        // Pull League Notice Directly from Storage Cache
         function showLeagueNoticeFromCache() {
             const leagueName = localStorage.getItem('league_name');
             const code = localStorage.getItem('league_code');
