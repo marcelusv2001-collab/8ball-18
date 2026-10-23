@@ -608,37 +608,48 @@
             }
         });
 
-        // 1. GLOBAL APP ANNOUNCEMENT (Fetches from Central DB global row/code with local cache recall)
+        // 1. GLOBAL APP ANNOUNCEMENT (Fetches from Central DB using active 6-digit league code)
         async function fetchGlobalAnnouncement() {
+            let code = localStorage.getItem('league_code');
+            if (!code) {
+                code = prompt("Please enter your 6-digit League Code to view global announcements:");
+                if (!code || code.length !== 6) {
+                    alert("A valid 6-digit league code is required.");
+                    return;
+                }
+                localStorage.setItem('league_code', code);
+            }
+
             const cachedTitle = localStorage.getItem('cached_global_title');
             const cachedMsg = localStorage.getItem('cached_global_msg');
 
             if (cachedTitle && cachedMsg) {
                 showAnnouncementModal(cachedTitle, cachedMsg);
             } else {
-                showAnnouncementModal("📢 Global App Announcement", "Checking central network...");
+                showAnnouncementModal("📢 Global App Announcement", "Checking Central Database...");
             }
 
             try {
-                const globalCode = "482910"; // Central DB Global reference code
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(globalCode)}`);
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
                 const data = await res.json();
 
                 if (data.status === 'success') {
                     const title = data.updateTitle || "📢 Global App Announcement";
-                    const msg = data.updateMessage || "No active global app announcements right now.";
+                    const msg = data.updateMessage || "No active global announcements at this time.";
                     localStorage.setItem('cached_global_title', title);
                     localStorage.setItem('cached_global_msg', msg);
                     showAnnouncementModal(title, msg);
+                } else {
+                    showAnnouncementModal("📢 Global App Announcement", "League code not found in Central Database.");
                 }
             } catch (e) {
                 if (!cachedTitle) {
-                    showAnnouncementModal("📢 Global App Announcement", "Welcome to 8 Ball 18 Games! Platform operational.");
+                    showAnnouncementModal("📢 Global App Announcement", "Could not connect to the Central Database.");
                 }
             }
         }
 
-        // 2. INDIVIDUAL LEAGUE ANNOUNCEMENT (Fetches from that league code's receiver sheet via getAdminUpdate)
+        // 2. INDIVIDUAL LEAGUE ANNOUNCEMENT (Fetches directly from that league code's listener webhook sheet)
         async function fetchLeagueAnnouncement() {
             let code = localStorage.getItem('league_code');
             if (!code) {
@@ -672,7 +683,7 @@
                 const leagueWebhookUrl = configData.webhookUrl;
                 localStorage.setItem('league_webhook_url', leagueWebhookUrl);
 
-                // Step B: Fetch the announcement directly from that league's receiver/listener sheet endpoint
+                // Step B: Fetch the announcement directly from that league's listener sheet endpoint
                 const targetUrl = `${leagueWebhookUrl}?action=getAdminUpdate`;
                 const res = await fetch(targetUrl);
                 const data = await res.json();
