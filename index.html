@@ -859,6 +859,23 @@
             }
         }
 
+        // Stationary Archive Loader (Only fetches when clicked, never auto-polls)
+async function loadPreviousMatch(matchId) {
+    try {
+        const response = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches`);
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            // Find and render the specific stationary match
+            const match = result.matches.find(m => m.id === matchId || m.homeTeam === matchId);
+            if (match) {
+                renderStationaryModal(match); // This keeps it frozen until closed or changed
+            }
+        }
+    } catch (err) {
+        console.error("Failed to load archived match:", err);
+    }
+}
         async function fetchLiveMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
