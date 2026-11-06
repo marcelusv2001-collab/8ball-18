@@ -981,30 +981,28 @@
         async function fetchArchivedMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
-            grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Loading archive...</p>';
+            grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Fetching official matches from listener database...</p>';
 
             try {
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches&code=${encodeURIComponent(code)}`);
                 const data = await res.json();
 
-                if (data.status === 'success' && data.matches) {
+                if (data.status === 'success' && data.matches && data.matches.length > 0) {
                     cachedArchivedMatches = data.matches;
                     
-                    // Populate week dropdown
-                    const dates = [...new Set(cachedArchivedMatches.map(m => m.date))].sort().reverse();
+                    // Build distinct date filter list
+                   const dates = [...new Set(cachedArchivedMatches.map(m => (m.date || '').split('T')[0]))].filter(Boolean).sort().reverse();
                     const select = document.getElementById('archive-week-select');
                     select.innerHTML = '<option value="">-- Select Match Date / Week --</option>' + 
                         dates.map(d => `<option value="${d}">Match Date: ${d}</option>`).join('');
 
-                    if (dates.length > 0) {
-                        select.value = dates[0]; // Default to most recent week
-                        renderArchiveMatches();
-                    } else {
-                        grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No previous matches found.</p>';
-                    }
+                    select.value = dates[0]; // Auto-select most recent approved match date
+                    renderArchiveMatches();
+                } else {
+                    grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No approved matches found in the league database.</p>';
                 }
             } catch(e) {
-                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Failed to load archive.</p>';
+                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Failed to retrieve approved matches.</p>';
             }
         }
 
@@ -1015,7 +1013,7 @@
             const filtered = cachedArchivedMatches.filter(m => !selectedDate || m.date === selectedDate);
 
             if (filtered.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No matches found for this date.</p>';
+                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No approved matches found for this date.</p>';
                 return;
             }
 
@@ -1058,8 +1056,8 @@
                 return `
                     <div class="live-card" style="border-color: #475569;">
                         <div class="live-card-header">
-                            <span>ARCHIVE — ${m.date}</span>
-                            <span style="color: #94a3b8;">FINAL</span>
+                            <span>APPROVED — ${m.date}</span>
+                            <span style="color: #38bdf8;">OFFICIAL</span>
                         </div>
                         <div class="live-team-row">
                             <span>${m.homeTeam}</span>
@@ -1074,7 +1072,7 @@
                         </div>
                         <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
                             <button onclick="toggleScorecard('${matchId}'); renderArchiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
-                                📋 View Final Scorecard ${isOpen ? '▴' : '▾'}
+                                📋 View Official Scorecard ${isOpen ? '▴' : '▾'}
                             </button>
                             <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 150px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
                                 ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded.</p>'}
