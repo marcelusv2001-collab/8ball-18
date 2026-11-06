@@ -835,16 +835,28 @@
             }
         }
 
-        async function fetchLiveMatches() {
+                async function fetchLiveMatches() {
             const grid = document.getElementById('live-matches-grid');
-            const code = localStorage.getItem('league_code') || "482910";
+            const code = localStorage.getItem('league_code') || "";
 
             try {
+                let activeMatchesList = [];
+
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
                 const data = await res.json();
 
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
-                    grid.innerHTML = data.matches.map(m => {
+                    activeMatchesList = data.matches;
+                } else if (code) {
+                    const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
+                    const configData = await configRes.json();
+                    if (configData.status === 'success' && configData.liveMatch && configData.liveMatch.status !== 'completed') {
+                        activeMatchesList = [configData.liveMatch];
+                    }
+                }
+
+                if (activeMatchesList.length > 0) {
+                    grid.innerHTML = activeMatchesList.map(m => {
                         const gamesHtml = (m.games || []).map((g, idx) => {
                             let winClass = '';
                             if (g.win === 'h') winClass = 'win-h';
@@ -862,7 +874,7 @@
                             `;
                         }).join('');
 
-                        const activeGame = (m.games || []).find(g => g.id === m.currentRack) || (m.games || [])[m.currentRack - 1];
+                        const activeGame = (m.games || []).find(g => g.id === m.currentRack) || (m.games || [])[(m.currentRack || 1) - 1];
                         const hPlayer = activeGame && activeGame.h ? activeGame.h : 'Home';
                         const vPlayer = activeGame && activeGame.v ? activeGame.v : 'Away';
 
@@ -897,7 +909,7 @@
             } catch (e) {
                 grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Unable to load live scores at this time.</p>';
             }
-        }
+                }
     </script>
 </body>
 </html>
