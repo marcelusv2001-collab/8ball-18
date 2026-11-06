@@ -820,87 +820,92 @@
     }
 
     async function proceedToSendText() {
-        const msg = buildMessage();
-        const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
+    const msg = buildMessage();
+    const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
 
-        if (!leagueCode) {
-            alert("Please enter a 6-digit league code before submitting.");
-            return;
-        }
+    if (!leagueCode) {
+        alert("Please enter a 6-digit league code before submitting.");
+        return;
+    }
 
-        const submitBtn = document.getElementById('submit-btn');
-        if (submitBtn) {
-            submitBtn.innerText = '⏳ LOOKING UP...';
-            submitBtn.disabled = true;
-            submitBtn.classList.add('loading');
-        }
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+        submitBtn.innerText = '⏳ LOOKING UP...';
+        submitBtn.disabled = true;
+        submitBtn.classList.add('loading');
+    }
 
-        try {
-            const lookupUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(leagueCode)}`;
-            const lookupRes = await fetch(lookupUrl);
-            const lookupData = await lookupRes.json();
+    try {
+        const lookupUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(leagueCode)}`;
+        const lookupRes = await fetch(lookupUrl);
+        const lookupData = await lookupRes.json();
 
-            if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
-                alert("Could not find a registered listener URL for league code: " + leagueCode);
-                if (submitBtn) {
-                    submitBtn.innerText = 'Submit Match';
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove('loading');
-                }
-                return;
-            }
-            const webhookUrl = lookupData.webhookUrl;
-            localStorage.setItem('league_webhook_url', webhookUrl);
-
-            if (submitBtn) submitBtn.innerText = '⏳ SENDING...';
-
-            const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
-            const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
-            
-            const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
-            const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
-            
-            const leagueTitle = localStorage.getItem('league_name') || "8 Ball League";
-
-            const payloadData = {
-                payload: msg,
-                leagueTitle: leagueTitle,
-                homeTeam: hT,
-                homeScore: hScore,
-                visitTeam: vT,
-                visitScore: vScore,
-                games: state,
-                homeSig: homeSignatureData || '',
-                visitSig: visitingSignatureData || ''
-            };
-
-            await fetch(webhookUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8"
-                },
-                body: JSON.stringify(payloadData)
-            });
-            alert('Match successfully Submitted To Your League Administrator!');
-            if (submitBtn) {
-                submitBtn.innerText = 'Submitted Successfully';
-                submitBtn.disabled = true;
-                submitBtn.classList.remove('loading');
-                submitBtn.style.display = 'none';
-            }
-            const resendBtn = document.getElementById('resend-btn');
-            if (resendBtn) resendBtn.style.display = 'block';
-
-        } catch (err) {
-            alert('Error sending match to backend: ' + err.message);
+        if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
+            alert("Could not find a registered listener URL for league code: " + leagueCode);
             if (submitBtn) {
                 submitBtn.innerText = 'Submit Match';
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('loading');
             }
+            return;
         }
-    } 
+        const webhookUrl = lookupData.webhookUrl;
+        localStorage.setItem('league_webhook_url', webhookUrl);
+
+        if (submitBtn) submitBtn.innerText = '⏳ SENDING...';
+
+        const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
+        const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
+        
+        const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
+        const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
+        
+        const leagueTitle = localStorage.getItem('league_name') || lookupData.leagueName || "8-Ball Cash League";
+
+        // Included leagueCode in payloadData
+        const payloadData = {
+            action: 'submitMatch',
+            leagueCode: leagueCode,
+            payload: msg,
+            leagueTitle: leagueTitle,
+            homeTeam: hT,
+            homeScore: hScore,
+            visitTeam: vT,
+            visitScore: vScore,
+            games: state,
+            homeSig: homeSignatureData || '',
+            visitSig: visitingSignatureData || ''
+        };
+
+        await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(payloadData)
+        });
+
+        alert('Match successfully Submitted To Your League Administrator!');
+        if (submitBtn) {
+            submitBtn.innerText = 'Submitted Successfully';
+            submitBtn.disabled = true;
+            submitBtn.classList.remove('loading');
+            submitBtn.style.display = 'none';
+        }
+        const resendBtn = document.getElementById('resend-btn');
+        if (resendBtn) resendBtn.style.display = 'block';
+
+    } catch (err) {
+        alert('Error sending match to backend: ' + err.message);
+        if (submitBtn) {
+            submitBtn.innerText = 'Submit Match';
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        }
+    }
+}
+
 
     function toggleHelp() {
         const modal = document.getElementById('help-modal');
