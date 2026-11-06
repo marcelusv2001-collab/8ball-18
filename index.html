@@ -395,6 +395,98 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
         }
 
+        /* Live Spectator Modal Component Styles */
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #22c55e;
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+        }
+        .live-card {
+            background: var(--bg);
+            border: 1px solid var(--slate);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+        }
+        .live-card-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--gold);
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .live-team-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+            padding: 1px 0;
+        }
+        .live-score-badge {
+            background: var(--card-bg);
+            color: var(--gold);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--slate);
+            font-size: 0.85rem;
+        }
+        .active-matchup-bar {
+            background: #1e293b;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin: 4px 0 6px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            border-left: 3px solid var(--gold);
+        }
+        .active-player { font-weight: bold; color: #fff; }
+        .game-breakdown-bar {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 3px;
+            margin-top: 4px;
+            padding-top: 6px;
+            border-top: 1px solid var(--slate);
+        }
+        .game-pill {
+            background: #020617;
+            border: 1px solid #334155;
+            border-radius: 3px;
+            padding: 2px 0;
+            text-align: center;
+            font-size: 0.6rem;
+            font-weight: bold;
+            color: #64748b;
+            position: relative;
+            line-height: 1.1;
+        }
+        .game-pill.win-h { background: #1e3a8a; border-color: #3b82f6; color: #ffffff; }
+        .game-pill.win-v { background: #7f1d1d; border-color: #ef4444; color: #ffffff; }
+        .badge-run, .badge-8bb {
+            position: absolute;
+            top: -4px;
+            right: -2px;
+            font-size: 0.45rem;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 900;
+            line-height: 1;
+        }
+        .badge-run { background: #fbbf24; color: #000; }
+        .badge-8bb { background: #22c55e; color: #000; }
+
         footer {
             background: var(--card-bg);
             border-top: 1px solid var(--slate);
@@ -429,6 +521,9 @@
             <h1>🎱 8 BALL 18 GAMES</h1>
         </div>
         <nav>
+            <button type="button" class="btn-announce-trigger" onclick="toggleSpectatorModal(true)" style="background: #1e3a8a; border-color: #3b82f6;">
+                <span class="live-dot"></span> Live Scores ▾
+            </button>
             <a href="#features" class="nav-link-text">Features</a>
             <a href="#how-it-works" class="nav-link-text">How It Works</a>
             <a href="#faq" class="nav-link-text">FAQ</a>
@@ -444,6 +539,22 @@
             </div>
         </nav>
     </header>
+
+    <!-- LIVE SPECTATOR MODAL -->
+    <div id="spectator-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 480px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate); padding-bottom: 6px; margin-bottom: 8px;">
+                <h2 style="color: var(--gold); margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                    <span class="live-dot"></span> League Live Matches
+                </h2>
+                <button onclick="toggleSpectatorModal(false)" style="background: none; border: none; color: var(--text-sub); font-size: 1.25rem; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+            <div id="live-matches-grid" style="max-height: 60vh; overflow-y: auto; padding: 2px;">
+                <p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Loading live matches...</p>
+            </div>
+            <button onclick="toggleSpectatorModal(false)" style="background: var(--slate); color: #fff; border: 1px solid var(--slate); width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.8rem;">CLOSE</button>
+        </div>
+    </div>
 
     <div id="announcement-modal" class="modal-overlay">
         <div class="modal-content">
@@ -708,6 +819,84 @@
 
         function closeAnnouncementModal() {
             document.getElementById('announcement-modal').style.display = 'none';
+        }
+
+        // --- SPECTATOR LIVE POLLING LOGIC ---
+        let spectatorInterval = null;
+
+        function toggleSpectatorModal(show) {
+            const modal = document.getElementById('spectator-modal');
+            modal.style.display = show ? 'flex' : 'none';
+            if (show) {
+                fetchLiveMatches();
+                spectatorInterval = setInterval(fetchLiveMatches, 4000);
+            } else {
+                if (spectatorInterval) clearInterval(spectatorInterval);
+            }
+        }
+
+        async function fetchLiveMatches() {
+            const grid = document.getElementById('live-matches-grid');
+            const code = localStorage.getItem('league_code') || "482910";
+
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
+                const data = await res.json();
+
+                if (data.status === 'success' && data.matches && data.matches.length > 0) {
+                    grid.innerHTML = data.matches.map(m => {
+                        const gamesHtml = (m.games || []).map((g, idx) => {
+                            let winClass = '';
+                            if (g.win === 'h') winClass = 'win-h';
+                            if (g.win === 'v') winClass = 'win-v';
+
+                            let markerBadge = '';
+                            if (g.h8B || g.v8B) markerBadge = '<span class="badge-8bb">8B</span>';
+                            else if (g.hTR || g.vTR) markerBadge = '<span class="badge-run">TR</span>';
+
+                            return `
+                                <div class="game-pill ${winClass}">
+                                    ${idx + 1}
+                                    ${markerBadge}
+                                </div>
+                            `;
+                        }).join('');
+
+                        const activeGame = (m.games || []).find(g => g.id === m.currentRack) || (m.games || [])[m.currentRack - 1];
+                        const hPlayer = activeGame && activeGame.h ? activeGame.h : 'Home';
+                        const vPlayer = activeGame && activeGame.v ? activeGame.v : 'Away';
+
+                        return `
+                            <div class="live-card">
+                                <div class="live-card-header">
+                                    <span>GAME ${m.currentRack || 1} OF 18</span>
+                                    <span style="color: #22c55e;">● LIVE</span>
+                                </div>
+                                <div class="live-team-row">
+                                    <span>${m.homeTeam}</span>
+                                    <span class="live-score-badge">${m.homeScore}</span>
+                                </div>
+                                <div class="live-team-row">
+                                    <span>${m.visitTeam}</span>
+                                    <span class="live-score-badge">${m.visitScore}</span>
+                                </div>
+                                <div class="active-matchup-bar">
+                                    <span class="active-player" style="color: #60a5fa;">${hPlayer}</span>
+                                    <span style="color: var(--gold); font-size: 0.65rem; font-weight: bold;">GM ${m.currentRack || 1}</span>
+                                    <span class="active-player" style="color: #f87171;">${vPlayer}</span>
+                                </div>
+                                <div class="game-breakdown-bar">
+                                    ${gamesHtml}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No active matches currently in progress.</p>';
+                }
+            } catch (e) {
+                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Unable to load live scores at this time.</p>';
+            }
         }
     </script>
 </body>
