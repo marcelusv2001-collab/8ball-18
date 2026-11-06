@@ -760,6 +760,37 @@
             }
         }
 
+function openReviewModal(idx) {
+    const match = stagedMatches[idx];
+    document.getElementById('edit-match-index').value = idx;
+    document.getElementById('edit-match-payload').value = match.payload;
+    document.getElementById('edit-home-sig-preview').src = match.homeSig || '';
+    document.getElementById('edit-visit-sig-preview').src = match.visitSig || '';
+
+    // --- LOCK DOWN FOR PREVIOUS / ARCHIVED MATCHES ---
+    stopLivePolling(); // Kills any background refresh loops
+
+    if (match.approved || match.status === 'completed') {
+        // Hide live action controls when viewing archives
+        if (document.getElementById('live-controls-panel')) {
+            document.getElementById('live-controls-panel').style.display = 'none';
+        }
+        if (document.getElementById('archive-watermark-badge')) {
+            document.getElementById('archive-watermark-badge').innerText = 'STATUS: ARCHIVED (READ-ONLY)';
+        }
+    } else {
+        // Re-enable controls if it's a live/staged pending match
+        if (document.getElementById('live-controls-panel')) {
+            document.getElementById('live-controls-panel').style.display = 'block';
+        }
+        if (document.getElementById('archive-watermark-badge')) {
+            document.getElementById('archive-watermark-badge').innerText = 'STATUS: STAGED / PENDING';
+        }
+    }
+
+    document.getElementById('review-modal').style.display = 'flex';
+}
+        
         // Pull League Notice: Check Cache First -> Network Fallback with Dynamic League Title
         async function showLeagueNoticeFromCache() {
             const leagueName = localStorage.getItem('league_name');
@@ -876,6 +907,41 @@ async function loadPreviousMatch(matchId) {
         console.error("Failed to load archived match:", err);
     }
 }
+
+        let livePollingInterval = null;
+
+// 1. STOP BACKGROUND POLLING: Kills any active live timer immediately
+function stopLivePolling() {
+    if (livePollingInterval) {
+        clearInterval(livePollingInterval);
+        livePollingInterval = null;
+    }
+}
+
+// 2. ISOLATE & RENDER STATIONARY ARCHIVE: Loads static historical data without triggers
+function loadStationaryArchive(matchObject) {
+    // Immediately cut off live updates
+    stopLivePolling();
+
+    // Bind strictly to the static historical data properties
+    document.getElementById('edit-match-payload').value = matchObject.payload || "Stationary Archive Record (Read-Only)";
+    document.getElementById('edit-home-sig-preview').src = matchObject.homeSig || '';
+    document.getElementById('edit-visit-sig-preview').src = matchObject.visitSig || '';
+
+    // Open your review/viewer modal safely
+    document.getElementById('review-modal').style.display = 'flex';
+}
+
+// 3. HIDE / DISABLE LIVE ACTION CONTROLS: Prevents accidental POST syncs on past matches
+function toggleArchiveReadonlyMode(isArchive) {
+    const saveAndApproveBtn = document.querySelector('#review-modal .btn:not(.btn-secondary):not(.btn-danger)');
+    
+    if (saveAndApproveBtn) {
+        // Hide the approve/sync button if we are looking at a past stationary match
+        saveAndApproveBtn.style.display = isArchive ? 'none' : 'inline-block';
+    }
+}
+        
         async function fetchLiveMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
