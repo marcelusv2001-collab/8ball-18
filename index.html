@@ -549,7 +549,7 @@
                 </h2>
                 <button onclick="toggleSpectatorModal(false)" style="background: none; border: none; color: var(--text-sub); font-size: 1.25rem; cursor: pointer; line-height: 1;">&times;</button>
             </div>
-            <!-- TAB SWITCHER & WEEK FILTER (PLACED HERE) -->
+            <!-- TAB SWITCHER & WEEK FILTER -->
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                 <button onclick="switchTab('live')" id="tab-live-btn" style="flex: 1; background: var(--gold); color: #000; border: none; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">🔴 Live Matches</button>
                 <button onclick="switchTab('archive')" id="tab-archive-btn" style="flex: 1; background: var(--slate); color: #fff; border: none; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">📂 Previous Matches</button>
@@ -560,7 +560,7 @@
                     <option value="">-- Select Match Date / Week --</option>
                 </select>
             </div>
-            <!-- END OF PLACEMENT -->
+
             <div id="live-matches-grid" style="max-height: 60vh; overflow-y: auto; padding: 2px;">
                 <p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Loading live matches...</p>
             </div>
@@ -736,13 +736,11 @@
             let msg = localStorage.getItem('cached_global_msg');
             const title = "📢 Global App Announcement";
 
-            // 1. Instant Cache Display
             if (msg) {
                 showAnnouncementModal(title, msg);
                 return;
             }
 
-            // 2. Automatic Fallback Fetch if Cache Empty
             showAnnouncementModal(title, "Fetching latest app announcement...");
             let code = localStorage.getItem('league_code') || "482910";
 
@@ -760,56 +758,51 @@
             }
         }
 
-function openReviewModal(idx) {
-    const match = stagedMatches[idx];
-    document.getElementById('edit-match-index').value = idx;
-    document.getElementById('edit-match-payload').value = match.payload;
-    document.getElementById('edit-home-sig-preview').src = match.homeSig || '';
-    document.getElementById('edit-visit-sig-preview').src = match.visitSig || '';
+        // Modal Review Safeguards
+        function openReviewModal(idx) {
+            const match = stagedMatches[idx];
+            if (document.getElementById('edit-match-index')) document.getElementById('edit-match-index').value = idx;
+            if (document.getElementById('edit-match-payload')) document.getElementById('edit-match-payload').value = match ? match.payload : '';
+            if (document.getElementById('edit-home-sig-preview')) document.getElementById('edit-home-sig-preview').src = match ? (match.homeSig || '') : '';
+            if (document.getElementById('edit-visit-sig-preview')) document.getElementById('edit-visit-sig-preview').src = match ? (match.visitSig || '') : '';
 
-    // --- LOCK DOWN FOR PREVIOUS / ARCHIVED MATCHES ---
-    stopLivePolling(); // Kills any background refresh loops
+            stopSpectatorPolling();
 
-    if (match.approved || match.status === 'completed') {
-        // Hide live action controls when viewing archives
-        if (document.getElementById('live-controls-panel')) {
-            document.getElementById('live-controls-panel').style.display = 'none';
-        }
-        if (document.getElementById('archive-watermark-badge')) {
-            document.getElementById('archive-watermark-badge').innerText = 'STATUS: ARCHIVED (READ-ONLY)';
-        }
-    } else {
-        // Re-enable controls if it's a live/staged pending match
-        if (document.getElementById('live-controls-panel')) {
-            document.getElementById('live-controls-panel').style.display = 'block';
-        }
-        if (document.getElementById('archive-watermark-badge')) {
-            document.getElementById('archive-watermark-badge').innerText = 'STATUS: STAGED / PENDING';
-        }
-    }
+            if (match && (match.approved || match.status === 'completed')) {
+                if (document.getElementById('live-controls-panel')) {
+                    document.getElementById('live-controls-panel').style.display = 'none';
+                }
+                if (document.getElementById('archive-watermark-badge')) {
+                    document.getElementById('archive-watermark-badge').innerText = 'STATUS: ARCHIVED (READ-ONLY)';
+                }
+            } else {
+                if (document.getElementById('live-controls-panel')) {
+                    document.getElementById('live-controls-panel').style.display = 'block';
+                }
+                if (document.getElementById('archive-watermark-badge')) {
+                    document.getElementById('archive-watermark-badge').innerText = 'STATUS: STAGED / PENDING';
+                }
+            }
 
-    document.getElementById('review-modal').style.display = 'flex';
-}
+            if (document.getElementById('review-modal')) document.getElementById('review-modal').style.display = 'flex';
+        }
         
-        // Pull League Notice: Check Cache First -> Network Fallback with Dynamic League Title
+        // Pull League Notice: Check Cache First -> Network Fallback
         async function showLeagueNoticeFromCache() {
             const leagueName = localStorage.getItem('league_name');
             const code = localStorage.getItem('league_code');
 
-            // Builds distinct title using League Name (e.g., "🏆 Mom's League Announcement") or League Code
             const dynamicLeagueTitle = leagueName 
                 ? `🏆 ${leagueName} Announcement` 
                 : (code ? `🏆 League ${code} Announcement` : "🏆 Individual League Announcement");
 
             let msg = localStorage.getItem('cached_league_msg');
 
-            // 1. Instant Cache Display
             if (msg) {
                 showAnnouncementModal(dynamicLeagueTitle, msg);
                 return;
             }
 
-            // 2. Automatic Fallback Fetch if Cache Empty
             if (!code) {
                 const userCode = prompt("Please enter your 6-digit League Code:");
                 if (!userCode || userCode.length !== 6) return;
@@ -864,23 +857,47 @@ function openReviewModal(idx) {
             document.getElementById('announcement-modal').style.display = 'none';
         }
 
-        // --- SPECTATOR LIVE POLLING LOGIC ---
+        // --- SPECTATOR & TAB CONTROL LOGIC ---
         let spectatorInterval = null;
+        let currentModalTab = 'live';
+        let cachedArchivedMatches = [];
+        const openScorecards = new Set();
+
+        function stopSpectatorPolling() {
+            if (spectatorInterval) {
+                clearInterval(spectatorInterval);
+                spectatorInterval = null;
+            }
+        }
 
         function toggleSpectatorModal(show) {
             const modal = document.getElementById('spectator-modal');
             modal.style.display = show ? 'flex' : 'none';
             if (show) {
-                fetchLiveMatches();
-                spectatorInterval = setInterval(fetchLiveMatches, 4000);
+                switchTab('live');
             } else {
-                if (spectatorInterval) clearInterval(spectatorInterval);
+                stopSpectatorPolling();
             }
         }
 
-              // Track which scorecards are currently expanded by spectators
+        function switchTab(tab) {
+            currentModalTab = tab;
+            document.getElementById('tab-live-btn').style.background = tab === 'live' ? 'var(--gold)' : 'var(--slate)';
+            document.getElementById('tab-live-btn').style.color = tab === 'live' ? '#000' : '#fff';
+            document.getElementById('tab-archive-btn').style.background = tab === 'archive' ? 'var(--gold)' : 'var(--slate)';
+            document.getElementById('tab-archive-btn').style.color = tab === 'archive' ? '#000' : '#fff';
+            
+            document.getElementById('archive-date-filter-container').style.display = tab === 'archive' ? 'block' : 'none';
 
-       const openScorecards = new Set();
+            if (tab === 'live') {
+                stopSpectatorPolling();
+                fetchLiveMatches();
+                spectatorInterval = setInterval(fetchLiveMatches, 4000);
+            } else {
+                stopSpectatorPolling();
+                fetchArchivedMatches();
+            }
+        }
 
         function toggleScorecard(matchId) {
             if (openScorecards.has(matchId)) {
@@ -890,59 +907,50 @@ function openReviewModal(idx) {
             }
         }
 
-        // Stationary Archive Loader (Only fetches when clicked, never auto-polls)
-async function loadPreviousMatch(matchId) {
-    try {
-        const response = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches`);
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-            // Find and render the specific stationary match
-            const match = result.matches.find(m => m.id === matchId || m.homeTeam === matchId);
-            if (match) {
-                renderStationaryModal(match); // This keeps it frozen until closed or changed
+        async function loadPreviousMatch(matchId) {
+            try {
+                stopSpectatorPolling();
+                const response = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches`);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    const match = result.matches.find(m => m.id === matchId || m.homeTeam === matchId);
+                    if (match) {
+                        loadStationaryArchive(match);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load archived match:", err);
             }
         }
-    } catch (err) {
-        console.error("Failed to load archived match:", err);
-    }
-}
 
-        let livePollingInterval = null;
+        function loadStationaryArchive(matchObject) {
+            stopSpectatorPolling();
+            if (document.getElementById('edit-match-payload')) {
+                document.getElementById('edit-match-payload').value = matchObject.payload || "Stationary Archive Record (Read-Only)";
+            }
+            if (document.getElementById('edit-home-sig-preview')) {
+                document.getElementById('edit-home-sig-preview').src = matchObject.homeSig || '';
+            }
+            if (document.getElementById('edit-visit-sig-preview')) {
+                document.getElementById('edit-visit-sig-preview').src = matchObject.visitSig || '';
+            }
+            toggleArchiveReadonlyMode(true);
+            if (document.getElementById('review-modal')) {
+                document.getElementById('review-modal').style.display = 'flex';
+            }
+        }
 
-// 1. STOP BACKGROUND POLLING: Kills any active live timer immediately
-function stopLivePolling() {
-    if (livePollingInterval) {
-        clearInterval(livePollingInterval);
-        livePollingInterval = null;
-    }
-}
+        function toggleArchiveReadonlyMode(isArchive) {
+            const saveAndApproveBtn = document.querySelector('#review-modal .btn:not(.btn-secondary):not(.btn-danger)');
+            if (saveAndApproveBtn) {
+                saveAndApproveBtn.style.display = isArchive ? 'none' : 'inline-block';
+            }
+        }
 
-// 2. ISOLATE & RENDER STATIONARY ARCHIVE: Loads static historical data without triggers
-function loadStationaryArchive(matchObject) {
-    // Immediately cut off live updates
-    stopLivePolling();
-
-    // Bind strictly to the static historical data properties
-    document.getElementById('edit-match-payload').value = matchObject.payload || "Stationary Archive Record (Read-Only)";
-    document.getElementById('edit-home-sig-preview').src = matchObject.homeSig || '';
-    document.getElementById('edit-visit-sig-preview').src = matchObject.visitSig || '';
-
-    // Open your review/viewer modal safely
-    document.getElementById('review-modal').style.display = 'flex';
-}
-
-// 3. HIDE / DISABLE LIVE ACTION CONTROLS: Prevents accidental POST syncs on past matches
-function toggleArchiveReadonlyMode(isArchive) {
-    const saveAndApproveBtn = document.querySelector('#review-modal .btn:not(.btn-secondary):not(.btn-danger)');
-    
-    if (saveAndApproveBtn) {
-        // Hide the approve/sync button if we are looking at a past stationary match
-        saveAndApproveBtn.style.display = isArchive ? 'none' : 'inline-block';
-    }
-}
-        
         async function fetchLiveMatches() {
+            if (currentModalTab !== 'live') return;
+
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
 
@@ -1042,29 +1050,17 @@ function toggleArchiveReadonlyMode(isArchive) {
                 grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Unable to load live scores at this time.</p>';
             }
         }
-        let currentModalTab = 'live';
-        let cachedArchivedMatches = [];
-
-        function switchTab(tab) {
-            currentModalTab = tab;
-            document.getElementById('tab-live-btn').style.background = tab === 'live' ? 'var(--gold)' : 'var(--slate)';
-            document.getElementById('tab-live-btn').style.color = tab === 'live' ? '#000' : '#fff';
-            document.getElementById('tab-archive-btn').style.background = tab === 'archive' ? 'var(--gold)' : 'var(--slate)';
-            document.getElementById('tab-archive-btn').style.color = tab === 'archive' ? '#000' : '#fff';
-            
-            document.getElementById('archive-date-filter-container').style.display = tab === 'archive' ? 'block' : 'none';
-
-            if (tab === 'live') {
-                fetchLiveMatches();
-            } else {
-                fetchArchivedMatches();
-            }
-        }
 
         async function fetchArchivedMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
-            grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Fetching official matches from listener database...</p>';
+
+            if (cachedArchivedMatches.length > 0) {
+                renderArchiveMatches();
+                return;
+            }
+
+            grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Fetching official matches from database...</p>';
 
             try {
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches&code=${encodeURIComponent(code)}`);
@@ -1073,13 +1069,12 @@ function toggleArchiveReadonlyMode(isArchive) {
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
                     cachedArchivedMatches = data.matches;
                     
-                    // Build distinct date filter list
-                   const dates = [...new Set(cachedArchivedMatches.map(m => (m.date || '').split('T')[0]))].filter(Boolean).sort().reverse();
+                    const dates = [...new Set(cachedArchivedMatches.map(m => (m.date || '').split('T')[0]))].filter(Boolean).sort().reverse();
                     const select = document.getElementById('archive-week-select');
                     select.innerHTML = '<option value="">-- Select Match Date / Week --</option>' + 
                         dates.map(d => `<option value="${d}">Match Date: ${d}</option>`).join('');
 
-                    select.value = dates[0]; // Auto-select most recent approved match date
+                    if (dates.length > 0) select.value = dates[0];
                     renderArchiveMatches();
                 } else {
                     grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No approved matches found in the league database.</p>';
@@ -1090,6 +1085,8 @@ function toggleArchiveReadonlyMode(isArchive) {
         }
 
         function renderArchiveMatches() {
+            if (currentModalTab !== 'archive') return;
+
             const grid = document.getElementById('live-matches-grid');
             const selectedDate = document.getElementById('archive-week-select').value;
             
