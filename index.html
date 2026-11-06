@@ -835,21 +835,30 @@
             }
         }
 
-               async function fetchLiveMatches() {
+              // Track which scorecards are currently expanded by spectators
+        const openScorecards = new Set();
+
+        function toggleScorecard(matchId) {
+            if (openScorecards.has(matchId)) {
+                openScorecards.delete(matchId);
+            } else {
+                openScorecards.add(matchId);
+            }
+        }
+
+        async function fetchLiveMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
 
             try {
                 let activeMatchesList = [];
 
-                // Fetch all active live matches for this league code
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
                 const data = await res.json();
 
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
                     activeMatchesList = data.matches;
                 } else if (code) {
-                    // Fallback to single match lookup via getConfig if needed
                     const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
                     const configData = await configRes.json();
                     if (configData.status === 'success' && configData.liveMatch && configData.liveMatch.status !== 'completed') {
@@ -859,6 +868,9 @@
 
                 if (activeMatchesList.length > 0) {
                     grid.innerHTML = activeMatchesList.map((m, mIdx) => {
+                        const matchId = `match_${m.homeTeam}_${m.visitTeam}`.replace(/\s+/g, '_');
+                        const isOpen = openScorecards.has(matchId);
+
                         const gamesHtml = (m.games || []).map((g, idx) => {
                             let winClass = '';
                             if (g.win === 'h') winClass = 'win-h';
@@ -876,15 +888,14 @@
                             `;
                         }).join('');
 
-                        // Individual 18-game scorecard details breakdown
                         const detailedGamesList = (m.games || []).map(g => {
                             if (!g.h && !g.v && !g.win) return '';
                             const hName = g.h || '(Open)';
                             const vName = g.v || '(Open)';
                             const hWinClass = g.win === 'h' ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
                             const vWinClass = g.win === 'v' ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-                            const markers = (g.hTR || g.h8B ? ' [Home: ' + (g.hTR?'TR':'') + (g.h8B?'8B':'') + ']' : '') + 
-                                            (g.vTR || g.v8B ? ' [Away: ' + (g.vTR?'TR':'') + (g.v8B?'8B':'') + ']' : '');
+                            const markers = (g.hTR || g.h8B ? ' [Home: ' + (g.hTR?'TR':'') + (g.h8B?'8B':'' ) + ']' : '') + 
+                                            (g.vTR || g.v8B ? ' [Away: ' + (g.vTR?'TR':'') + (g.v8B?'8B':'' ) + ']' : '');
 
                             return `
                                 <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -923,12 +934,14 @@
                                 <div class="game-breakdown-bar">
                                     ${gamesHtml}
                                 </div>
-                                <details style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
-                                    <summary style="font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">📋 View Match Scorecard ▾</summary>
-                                    <div style="max-height: 150px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
+                                <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
+                                    <button onclick="toggleScorecard('${matchId}')" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
+                                        📋 View Match Scorecard ${isOpen ? '▴' : '▾'}
+                                    </button>
+                                    <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 150px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
                                         ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded yet.</p>'}
                                     </div>
-                                </details>
+                                </div>
                             </div>
                         `;
                     }).join('');
