@@ -836,7 +836,8 @@
         }
 
               // Track which scorecards are currently expanded by spectators
-        const openScorecards = new Set();
+
+       const openScorecards = new Set();
 
         function toggleScorecard(matchId) {
             if (openScorecards.has(matchId)) {
@@ -858,17 +859,11 @@
 
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
                     activeMatchesList = data.matches;
-                } else if (code) {
-                    const configRes = await fetch(`${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(code)}`);
-                    const configData = await configRes.json();
-                    if (configData.status === 'success' && configData.liveMatch && configData.liveMatch.status !== 'completed') {
-                        activeMatchesList = [configData.liveMatch];
-                    }
                 }
 
                 if (activeMatchesList.length > 0) {
                     grid.innerHTML = activeMatchesList.map((m, mIdx) => {
-                        const matchId = `match_${m.homeTeam}_${m.visitTeam}`.replace(/\s+/g, '_');
+                        const matchId = `match_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
                         const isOpen = openScorecards.has(matchId);
 
                         const gamesHtml = (m.games || []).map((g, idx) => {
@@ -894,8 +889,8 @@
                             const vName = g.v || '(Open)';
                             const hWinClass = g.win === 'h' ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
                             const vWinClass = g.win === 'v' ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-                            const markers = (g.hTR || g.h8B ? ' [Home: ' + (g.hTR?'TR':'') + (g.h8B?'8B':'' ) + ']' : '') + 
-                                            (g.vTR || g.v8B ? ' [Away: ' + (g.vTR?'TR':'') + (g.v8B?'8B':'' ) + ']' : '');
+                            const markers = (g.hTR || g.h8B ? ' [Home: ' + (g.hTR?'TR':'') + (g.h8B?'8B':'') + ']' : '') + 
+                                            (g.vTR || g.v8B ? ' [Away: ' + (g.vTR?'TR':'') + (g.v8B?'8B':'') + ']' : '');
 
                             return `
                                 <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
