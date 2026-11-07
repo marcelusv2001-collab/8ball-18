@@ -229,6 +229,89 @@
             height: 38px;
         }
 
+/* Pop-out Timer Modal Styles */
+        #timer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 4000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .timer-modal-content {
+            background: var(--slate);
+            border: 3px solid var(--gold);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+        }
+        .big-timer-display {
+            font-size: 4.5rem;
+            font-weight: 900;
+            font-family: monospace;
+            color: var(--gold);
+            background: #020617;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #334155;
+            width: 100%;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        .timer-modal-btns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+        }
+        .btn-modal-timer {
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .btn-timer-toggle { background: var(--gold); color: black; }
+        .btn-timer-reset { background: #475569; color: white; }
+        .timer-close-btn {
+            background: #ef4444;
+            color: white;
+            width: 100%;
+            margin-top: 5px;
+        }
+        .btn-timer {
+            background: #020617;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-timer.running {
+            background: #15803d;
+            color: white;
+            border-color: #22c55e;
+        }
+        
 .btn-timer {
             background: #020617;
             color: var(--gold);
@@ -379,6 +462,19 @@
     </div>
 </div>
 
+<!-- POP-OUT TIMER MODAL -->
+<div id="timer-modal">
+    <div class="timer-modal-content">
+        <h2 style="color: var(--gold); margin: 0; font-size: 1.2rem;">⏱️ MATCH TIMER</h2>
+        <div id="modal-timer-display" class="big-timer-display">00:00</div>
+        <div class="timer-modal-btns">
+            <button type="button" class="btn-modal-timer btn-timer-toggle" id="modal-toggle-btn" onclick="toggleTimer()">Start</button>
+            <button type="button" class="btn-modal-timer btn-timer-reset" onclick="resetTimer()">Reset</button>
+        </div>
+        <button type="button" class="btn-modal-timer timer-close-btn" onclick="closeTimerModal()">Close</button>
+    </div>
+</div>
+    
 <!-- UPDATE BROADCAST MODAL -->
 <div id="update-modal">
     <div class="modal-content">
@@ -486,7 +582,7 @@
         <div class="settings-btns">
             <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
             <button type="button" class="btn-clear" onclick="returnToLanding()" style="background: #1e293b; color: var(--gold); border: 1px solid var(--gold);">🏠 LANDING PAGE</button>
-            <button type="button" id="timer-btn" class="btn-timer" onclick="toggleTimer()" ondblclick="resetTimer()">⏱️ <span id="timer-display">00:00</span></button>
+            <button type="button" id="timer-btn" class="btn-timer" onclick="openTimerModal()">⏱️ <span id="timer-display">00:00</span></button>
         </div>
     </div>
 </details>
@@ -704,15 +800,29 @@ let timerInterval = null;
     let timerSeconds = 0;
     let isTimerRunning = false;
 
+    function openTimerModal() {
+        document.getElementById('timer-modal').style.display = 'flex';
+        updateTimerDisplay();
+    }
+
+    function closeTimerModal() {
+        document.getElementById('timer-modal').style.display = 'none';
+    }
+
     function toggleTimer() {
-        const btn = document.getElementById('timer-btn');
+        const toggleBtn = document.getElementById('modal-toggle-btn');
+        const smallBtn = document.getElementById('timer-btn');
+        
         if (isTimerRunning) {
             clearInterval(timerInterval);
             isTimerRunning = false;
-            btn.classList.remove('running');
+            if (toggleBtn) toggleBtn.innerText = "Start";
+            if (smallBtn) smallBtn.classList.remove('running');
         } else {
             isTimerRunning = true;
-            btn.classList.add('running');
+            if (toggleBtn) toggleBtn.innerText = "Pause";
+            if (smallBtn) smallBtn.classList.add('running');
+            
             timerInterval = setInterval(() => {
                 timerSeconds++;
                 updateTimerDisplay();
@@ -724,16 +834,23 @@ let timerInterval = null;
         clearInterval(timerInterval);
         timerSeconds = 0;
         isTimerRunning = false;
-        const btn = document.getElementById('timer-btn');
-        if (btn) btn.classList.remove('running');
+        const toggleBtn = document.getElementById('modal-toggle-btn');
+        const smallBtn = document.getElementById('timer-btn');
+        if (toggleBtn) toggleBtn.innerText = "Start";
+        if (smallBtn) smallBtn.classList.remove('running');
         updateTimerDisplay();
     }
 
     function updateTimerDisplay() {
         const mins = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
         const secs = (timerSeconds % 60).toString().padStart(2, '0');
-        const display = document.getElementById('timer-display');
-        if (display) display.innerText = `${mins}:${secs}`;
+        const timeStr = `${mins}:${secs}`;
+        
+        const smallDisplay = document.getElementById('timer-display');
+        const modalDisplay = document.getElementById('modal-timer-display');
+        
+        if (smallDisplay) smallDisplay.innerText = timeStr;
+        if (modalDisplay) modalDisplay.innerText = timeStr;
     }
     
     function initSignaturePad() {
