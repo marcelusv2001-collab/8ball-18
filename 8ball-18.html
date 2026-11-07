@@ -839,6 +839,49 @@ let timerInterval = null;
         }
     }
 
+    async function resetBoard() {
+        if(confirm("Unlock match and reset entire score sheet data?")) {
+            // Send clear signal to live spectator view first
+            const leagueCode = localStorage.getItem('league_code');
+            if (leagueCode) {
+                const clearPayload = {
+                    action: 'clearLiveMatch',
+                    leagueCode: leagueCode,
+                    status: 'cleared',
+                    lastUpdated: new Date().toISOString()
+                };
+                try {
+                    fetch(CENTRAL_DB_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(clearPayload)
+                    }).catch(() => {});
+                } catch (e) {}
+            }
+
+            isApproved = false;
+            homeSignatureData = null;
+            visitingSignatureData = null;
+            state.forEach(g => { g.h=""; g.v=""; g.hTR=g.h8B=g.vTR=g.v8B=false; g.win=null; g.hManual=false; g.vManual=false; });
+            document.getElementById('h-team').value = ""; 
+            document.getElementById('v-team').value = "";
+            localStorage.removeItem('active_match_state');
+            const submitBtn = document.getElementById('submit-btn');
+            const resendBtn = document.getElementById('resend-btn');
+            if (submitBtn) {
+                submitBtn.style.display = 'block';
+                submitBtn.innerText = 'Submit Match';
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+            }
+            if (resendBtn) resendBtn.style.display = 'none';
+
+            draw();
+        }
+    }
+
+    
     function resetTimer() {
         clearInterval(timerInterval);
         timerSeconds = 0;
