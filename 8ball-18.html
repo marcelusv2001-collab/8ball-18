@@ -229,6 +229,26 @@
             height: 38px;
         }
 
+.btn-timer {
+            background: #020617;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-timer.running {
+            background: #15803d;
+            color: white;
+            border-color: #22c55e;
+        }
+        
         .btn-submit { 
             background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); 
             color: #0f172a; 
@@ -466,6 +486,7 @@
         <div class="settings-btns">
             <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
             <button type="button" class="btn-clear" onclick="returnToLanding()" style="background: #1e293b; color: var(--gold); border: 1px solid var(--gold);">🏠 LANDING PAGE</button>
+            <button type="button" id="timer-btn" class="btn-timer" onclick="toggleTimer()" ondblclick="resetTimer()">⏱️ <span id="timer-display">00:00</span></button>
         </div>
     </div>
 </details>
@@ -679,6 +700,42 @@
         if (payBtnDisplay) payBtnDisplay.innerText = formattedAmount;
     }
 
+let timerInterval = null;
+    let timerSeconds = 0;
+    let isTimerRunning = false;
+
+    function toggleTimer() {
+        const btn = document.getElementById('timer-btn');
+        if (isTimerRunning) {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            btn.classList.remove('running');
+        } else {
+            isTimerRunning = true;
+            btn.classList.add('running');
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        timerSeconds = 0;
+        isTimerRunning = false;
+        const btn = document.getElementById('timer-btn');
+        if (btn) btn.classList.remove('running');
+        updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+        const mins = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+        const secs = (timerSeconds % 60).toString().padStart(2, '0');
+        const display = document.getElementById('timer-display');
+        if (display) display.innerText = `${mins}:${secs}`;
+    }
+    
     function initSignaturePad() {
         canvas = document.getElementById('sig-canvas');
         ctx = canvas.getContext('2d');
