@@ -648,6 +648,7 @@
     let canvas, ctx, drawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
+        updateActiveLeagueDisplay(); // <--- Add this line here
         // Check for updates automatically if a league code is already saved
         const savedCode = localStorage.getItem('league_code');
         if (savedCode) { 
@@ -1250,6 +1251,7 @@ let timerInterval = null;
                 localStorage.setItem('pay_val_8bb', result.bb8Payout);
                 localStorage.setItem('pay_val_run', result.runPayout);
                 localStorage.setItem('league_name', result.leagueName);
+                updateActiveLeagueDisplay();
 
                 const sheetUrlInput = document.getElementById('sheet-url');
                 if (sheetUrlInput) sheetUrlInput.value = result.rosterUrl;
@@ -1501,6 +1503,31 @@ let timerInterval = null;
         calculateMatchOwed();
     }
 
+function updateActiveLeagueDisplay() {
+        const savedCode = localStorage.getItem('league_code');
+        const savedName = localStorage.getItem('league_name');
+        
+        const nameDisplay = document.getElementById('display-active-league-name');
+        const codeDisplay = document.getElementById('display-active-league-code');
+        const displayView = document.getElementById('league-display-view');
+        const inputView = document.getElementById('league-input-view');
+
+        if (savedCode) {
+            if (nameDisplay) nameDisplay.innerText = savedName || "Connected League";
+            if (codeDisplay) codeDisplay.innerText = savedCode;
+            if (displayView) displayView.style.display = 'flex';
+            if (inputView) inputView.style.display = 'none';
+        } else {
+            if (displayView) displayView.style.display = 'none';
+            if (inputView) inputView.style.display = 'block';
+        }
+    }
+
+    function showLeagueInput() {
+        document.getElementById('league-display-view').style.display = 'none';
+        document.getElementById('league-input-view').style.display = 'block';
+    }
+    
     function setExclusiveMarker(gameId, clickedKey) {
         if (isMatchApproved()) return;
         const g = state[gameId - 1];
