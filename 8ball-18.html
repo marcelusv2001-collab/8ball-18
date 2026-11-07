@@ -532,17 +532,25 @@
 <details id="setup-panel">
     <summary onclick="handleSetupToggle(event)">⚙️ SETUP: CONFIG & STATS</summary>
     <div class="settings-content">
-        <!-- 6-DIGIT QUICK CONNECT (VISIBILE BY DEFAULT) -->
+        <!-- DYNAMIC QUICK CONNECT / SWITCH LEAGUE VIEW -->
         <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid var(--gold); margin-bottom: 10px;">
-            <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">League Quick-Connect</div>
-            <div class="pay-input-group">
-                <label for="league-code-input">Enter 6-Digit League Code</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="league-code-input" placeholder="e.g. 482910" maxlength="6">
-                    <button type="button" class="btn-load" onclick="fetchLeagueConfig()" style="padding: 0 15px; margin: 0; font-size: 0.75rem;">Sync</button>
+            <div id="league-display-view" style="display: none; flex-direction: column; align-items: center; gap: 4px;">
+                <div style="color: var(--gold); font-size: 0.8rem; font-weight: bold;">Active League: <span id="display-active-league-name" style="color: white;">None</span></div>
+                <div style="color: #94a3b8; font-size: 0.75rem;">Code: <span id="display-active-league-code" style="color: var(--gold);">------</span></div>
+                <button type="button" class="btn-load" onclick="showLeagueInput()" style="width: 100%; margin-top: 6px; font-size: 0.75rem;">Switch League</button>
+            </div>
+            
+            <div id="league-input-view" style="display: block;">
+                <div style="color: var(--gold); font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; text-align: center;">League Quick-Connect</div>
+                <div class="pay-input-group">
+                    <label for="league-code-input">Enter 6-Digit League Code</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="league-code-input" placeholder="e.g. 482910" maxlength="6">
+                        <button type="button" class="btn-load" onclick="fetchLeagueConfig()" style="padding: 0 15px; margin: 0; font-size: 0.75rem;">Sync</button>
+                    </div>
                 </div>
             </div>
-        </div> 
+        </div>
 
         <div class="status-container">
             <div id="led" class="led-light"></div>
@@ -851,6 +859,32 @@ let timerInterval = null;
         
         if (smallDisplay) smallDisplay.innerText = timeStr;
         if (modalDisplay) modalDisplay.innerText = timeStr;
+    }
+
+// Call this inside your DOMContentLoaded event listener and inside fetchLeagueConfig() after a successful sync
+    function updateActiveLeagueDisplay() {
+        const savedCode = localStorage.getItem('league_code');
+        const savedName = localStorage.getItem('league_name');
+        
+        const nameDisplay = document.getElementById('display-active-league-name');
+        const codeDisplay = document.getElementById('display-active-league-code');
+        const displayView = document.getElementById('league-display-view');
+        const inputView = document.getElementById('league-input-view');
+
+        if (savedCode) {
+            if (nameDisplay) nameDisplay.innerText = savedName || "Connected League";
+            if (codeDisplay) codeDisplay.innerText = savedCode;
+            if (displayView) displayView.style.display = 'flex';
+            if (inputView) inputView.style.display = 'none';
+        } else {
+            if (displayView) displayView.style.display = 'none';
+            if (inputView) inputView.style.display = 'block';
+        }
+    }
+
+    function showLeagueInput() {
+        document.getElementById('league-display-view').style.display = 'none';
+        document.getElementById('league-input-view').style.display = 'block';
     }
     
     function initSignaturePad() {
