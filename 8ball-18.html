@@ -695,6 +695,42 @@
         }
     }
 
+// 2. Live Match Sync Function (Ensures player names, team scores, and game markers are sent)
+    async function sendLiveMatchUpdate() {
+        const leagueCode = localStorage.getItem('league_code');
+        if (!leagueCode) return;
+
+        const homeTeam = document.getElementById('h-team')?.value || "Home Team";
+        const visitTeam = document.getElementById('v-team')?.value || "Visiting Team";
+        
+        // Pull current team scores if your app calculates them, or fallback to 0
+        const homeScore = typeof calculateTeamScores === 'function' ? calculateTeamScores('h') : 0;
+        const visitScore = typeof calculateTeamScores === 'function' ? calculateTeamScores('v') : 0;
+
+        const payload = {
+            action: 'updateLiveMatch',
+            leagueCode: leagueCode,
+            homeTeam: homeTeam,
+            visitTeam: visitTeam,
+            homeScore: homeScore,
+            visitScore: visitScore,
+            games: state, // Passes the full 18-game array containing player names (h, v) and markers
+            status: 'in-progress',
+            lastUpdated: new Date().toISOString()
+        };
+
+        try {
+            await fetch(CENTRAL_DB_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+        } catch (err) {
+            console.error("Live match sync error:", err);
+        }
+    }
+    
     function returnToLanding() {
         localStorage.removeItem('has_visited_8ball18');
         window.location.href = 'index.html';
@@ -839,9 +875,9 @@ let timerInterval = null;
         }
     }
 
+// 1. Updated Trashcan Reset Function (Clears local state and sends clear signal to live view)
     async function resetBoard() {
         if(confirm("Unlock match and reset entire score sheet data?")) {
-            // Send clear signal to live spectator view first
             const leagueCode = localStorage.getItem('league_code');
             if (leagueCode) {
                 const clearPayload = {
@@ -851,22 +887,29 @@ let timerInterval = null;
                     lastUpdated: new Date().toISOString()
                 };
                 try {
-                    fetch(CENTRAL_DB_URL, {
+                    await fetch(CENTRAL_DB_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify(clearPayload)
-                    }).catch(() => {});
-                } catch (e) {}
+                    });
+                } catch (e) {
+                    console.error("Clear sync failed", e);
+                }
             }
 
             isApproved = false;
             homeSignatureData = null;
             visitingSignatureData = null;
             state.forEach(g => { g.h=""; g.v=""; g.hTR=g.h8B=g.vTR=g.v8B=false; g.win=null; g.hManual=false; g.vManual=false; });
-            document.getElementById('h-team').value = ""; 
-            document.getElementById('v-team').value = "";
+            
+            const hTeamInput = document.getElementById('h-team');
+            const vTeamInput = document.getElementById('v-team');
+            if (hTeamInput) hTeamInput.value = ""; 
+            if (vTeamInput) vTeamInput.value = "";
+            
             localStorage.removeItem('active_match_state');
+            
             const submitBtn = document.getElementById('submit-btn');
             const resendBtn = document.getElementById('resend-btn');
             if (submitBtn) {
@@ -880,7 +923,6 @@ let timerInterval = null;
             draw();
         }
     }
-
     
     function resetTimer() {
         clearInterval(timerInterval);
