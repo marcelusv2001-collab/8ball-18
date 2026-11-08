@@ -648,9 +648,9 @@
 
     let canvas, ctx, drawing = false;
 
-    window.addEventListener('DOMContentLoaded', () => {
-        updateActiveLeagueDisplay(); // <--- Add this line here
-        // Check for updates automatically if a league code is already saved
+   window.addEventListener('DOMContentLoaded', () => {
+        updateActiveLeagueDisplay();
+        
         const savedCode = localStorage.getItem('league_code');
         if (savedCode) { 
             checkForUpdates(savedCode); 
@@ -664,7 +664,36 @@
 
         const savedMatchFee = localStorage.getItem('pay_match_fee');
         const savedVal8bb = localStorage.getItem('pay_val_8bb');
-        cons
+        const savedValRun = localStorage.getItem('pay_val_run');
+        
+        if (savedMatchFee !== null && document.getElementById('weekly-match-fee')) {
+            document.getElementById('weekly-match-fee').value = savedMatchFee;
+        }
+        if (savedVal8bb !== null && document.getElementById('val-8bb')) {
+            document.getElementById('val-8bb').value = savedVal8bb;
+        }
+        if (savedValRun !== null && document.getElementById('val-run')) {
+            document.getElementById('val-run').value = savedValRun;
+        }
+
+        const savedRosterUrl = localStorage.getItem('user_sheet_url');
+        const savedStatsUrl = localStorage.getItem('user_stats_url');
+        if (savedRosterUrl) {
+            const sheetInput = document.getElementById('sheet-url');
+            if (sheetInput) sheetInput.value = savedRosterUrl;
+            fetchRosters(savedRosterUrl, false);
+        }
+        if (savedStatsUrl) {
+            const statsInput = document.getElementById('stats-url');
+            if (statsInput) statsInput.value = savedStatsUrl;
+            updateStatsButton(savedStatsUrl);
+        }
+
+        loadMatchState();
+        draw();
+        initSignaturePad();
+        calculateMatchOwed();
+    });
             
         
         
@@ -756,29 +785,37 @@
         syncLiveMatchStateInBackground();
     }
 
-    async function syncLiveMatchStateInBackground() {
-        const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
-        const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
+   async function syncLiveMatchStateInBackground() {
+        const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input')?.value.trim();
+        if (!leagueCode) return;
+
+        const hT = document.getElementById('h-team')?.value || "Home Team";
+        const vT = document.getElementById('v-team')?.value || "Visiting Team";
         
-        const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
-        const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
+        const hScore = state.filter(g => g.win === 'h').length;
+        const vScore = state.filter(g => g.win === 'v').length;
 
         const activeGame = state.find(g => g.win === null) || state[17];
         const currentRack = activeGame ? activeGame.id : 18;
 
-        const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
-        if (!leagueCode) return;
-
         const payload = {
             action: 'updateLiveMatch',
-            
             leagueCode: leagueCode,
             homeTeam: hT,
             visitTeam: vT,
             homeScore: hScore,
             visitScore: vScore,
             currentRack: currentRack,
-            games: state,
+            games: state.map(g => ({
+                id: g.id,
+                h: g.h || '',
+                v: g.v || '',
+                win: g.win || null,
+                hTR: !!g.hTR,
+                h8B: !!g.h8B,
+                vTR: !!g.vTR,
+                v8B: !!g.v8B
+            })),
             status: isApproved ? 'completed' : 'in-progress',
             lastUpdated: new Date().toISOString()
         };
@@ -1621,15 +1658,49 @@ function updateActiveLeagueDisplay() {
         draw();
     }
 
-    function resetBoard() {
+  async function resetBoard() {
         if(confirm("Unlock match and reset entire score sheet data?")) {
+            // Capture team names and league code BEFORE wiping local inputs
+            const homeTeamVal = (document.getElementById('h-team')?.value || "").trim();
+            const visitTeamVal = (document.getElementById('v-team')?.value || "").trim();
+            const leagueCode = localStorage.getItem('league_code');
+
+            if (leagueCode) {
+                const clearPayload = {
+                    action: 'clearLiveMatch',
+                    leagueCode: leagueCode,
+                    homeTeam: homeTeamVal,
+                    visitTeam: visitTeamVal,
+                    lastUpdated: new Date().toISOString()
+                };
+                try {
+                    await fetch(CENTRAL_DB_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(clearPayload)
+                    });
+                } catch (e) {
+                    console.error("Clear sync failed", e);
+                }
+            }
+
+            // Clear local state and reset UI controls
             isApproved = false;
             homeSignatureData = null;
             visitingSignatureData = null;
-            state.forEach(g => { g.h=""; g.v=""; g.hTR=g.h8B=g.vTR=g.v8B=false; g.win=null; g.hManual=false; g.vManual=false; });
-            document.getElementById('h-team').value = ""; 
-            document.getElementById('v-team').value = "";
+            state.forEach(g => { 
+                g.h=""; g.v=""; g.hTR=g.h8B=g.vTR=g.v8B=false; 
+                g.win=null; g.hManual=false; g.vManual=false; 
+            });
+            
+            const hTeamInput = document.getElementById('h-team');
+            const vTeamInput = document.getElementById('v-team');
+            if (hTeamInput) hTeamInput.value = ""; 
+            if (vTeamInput) vTeamInput.value = "";
+            
             localStorage.removeItem('active_match_state');
+            
             const submitBtn = document.getElementById('submit-btn');
             const resendBtn = document.getElementById('resend-btn');
             if (submitBtn) {
@@ -1643,44 +1714,6 @@ function updateActiveLeagueDisplay() {
             draw();
         }
     }
-
-    function startVoice(targetId, idx = null, side = null) {
-        if (isMatchApproved()) return;
-        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if(!Speech) return;
-        const recognition = new Speech();
-        const btn = event.currentTarget;
-        recognition.onstart = () => btn.classList.add('listening');
-        recognition.onend = () => btn.classList.remove('listening');
-        recognition.onresult = (e) => {
-            const val = e.results[0][0].transcript;
-            document.getElementById(targetId).value = val;
-            if(idx !== null) {
-                state[idx][side] = val;
-                state[idx][side + 'Manual'] = true;
-            }
-            saveMatchState();
-            draw();
-        };
-        recognition.start();
-    }
-
-    function buildMessage() {
-        const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
-        const vT = (document.getElementById('v-team').value || "Visit").toUpperCase();
-        let msg = `8 BALL 18 GAMES\n[HT] ${hT} (${document.getElementById('h-score').innerText})\n[VT] ${vT} (${document.getElementById('v-score').innerText})\n\n`;
-        state.forEach(g => {
-            if (g.h || g.v || g.win) {
-                const hName = (g.h || "P") + (g.hManual ? ' (NP)' : '');
-                const vName = (g.v || "P") + (g.vManual ? ' (NP)' : '');
-                const hM = (g.hTR ? ' (TR)' : '') + (g.h8B ? ' (8BB)' : '');
-                const vM = (g.vTR ? ' (TR)' : '') + (g.v8B ? ' (8BB)' : '');
-                msg += `Gm${g.id} ${hName}${g.win === 'h' ? ' (W)' : ''}${hM} vs ${vName}${g.win === 'v' ? ' (W)' : ''}${vM}\n--\n--\n`;
-            }
-        });
-        return msg;
-    }
-
     function isMatchApproved() {
         return isApproved;
     }
