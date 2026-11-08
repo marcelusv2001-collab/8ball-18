@@ -948,88 +948,50 @@
             }
         }
         
-        async function fetchLiveMatches() {
-            if (currentModalTab !== 'live') return;
+// 1. Fetch live matches from Central DB
+async function fetchAndDisplayLiveMatches() {
+    const leagueCode = localStorage.getItem('league_code') || "";
+    
+    try {
+        const response = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+        const result = await response.json();
 
-            const grid = document.getElementById('live-matches-grid');
-            const code = localStorage.getItem('league_code') || "";
+        if (result.status === 'success' && result.matches) {
+            renderLiveMatchCards(result.matches);
+        } else {
+            renderLiveMatchCards([]);
+        }
+    } catch (err) {
+        console.error("Failed to load live matches:", err);
+    }
+}
 
-            try {
-                let activeMatchesList = [];
+// 2. Render function that creates the HTML cards inside your container
+function renderLiveMatchCards(matches) {
+    const container = document.getElementById('live-matches-container'); 
+    if (!container) return;
 
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
-                const data = await res.json();
+    if (!matches || matches.length === 0) {
+        container.innerHTML = `<p style="color: #94a3b8; text-align: center; font-size: 0.85rem;">No active live matches right now.</p>`;
+        return;
+    }
 
-                if (data.status === 'success' && data.matches && data.matches.length > 0) {
-                    activeMatchesList = data.matches;
-                }
+    container.innerHTML = matches.map(m => `
+        <div style="background: var(--slate, #1e293b); border: 1px solid var(--gold, #fbbf24); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold; color: var(--gold, #fbbf24); font-size: 0.85rem; margin-bottom: 6px;">
+                <span>${m.homeTeam || 'Home'} vs ${m.visitTeam || 'Visiting'}</span>
+                <span>Score: ${m.homeScore || 0} - ${m.visitScore || 0}</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #cbd5e1;">Status: In Progress (Rack ${m.currentRack || 1})</div>
+        </div>
+    `).join('');
+}
 
-                if (activeMatchesList.length > 0) {
-                    grid.innerHTML = activeMatchesList.map((m, mIdx) => {
-                        const matchId = `match_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
-                        const isOpen = openScorecards.has(matchId);
-
-                        // Render 18 Game Pills with Win & TR/8BB Markers
-                        const gamesHtml = (m.games || []).map((g, idx) => {
-                            let winClass = '';
-                            const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
-                            const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
-                            
-                            if (isHWin) winClass = 'win-h';
-                            if (isVWin) winClass = 'win-v';
-
-                            let markerBadge = '';
-                            const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
-                            const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
-
-                            if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                            else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
-
-                            return `
-                                <div class="game-pill ${winClass}">
-                                    ${idx + 1}
-                                    ${markerBadge}
-                                </div>
-                            `;
-                        }).join('');
-
-                        // Detailed Scorecard Breakdown List
-                        const detailedGamesList = (m.games || []).map((g, idx) => {
-                            const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
-                            const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
-                            const winner = g.win;
-
-                            if (!hName && !vName && !winner) return '';
-
-                            const isHWin = winner === 'h' || g.homeWin === true;
-                            const isVWin = winner === 'v' || g.visitWin === true;
-
-                            const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
-                            const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-
-                            const hTR = g.hTR || g.homeTR ? 'TR' : '';
-                            const h8B = g.h8B || g.home8BB ? '8BB' : '';
-                            const vTR = g.vTR || g.visitTR ? 'TR' : '';
-                            const v8B = g.v8B || g.visit8BB ? '8BB' : '';
-
-                            const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
-                            const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
-
-                            const gameNumber = g.id || (idx + 1);
-
-                            return `
-                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                    <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
-                                    <span style="flex: 1; text-align: left; ${hWinStyle}">
-                                        ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
-                                    </span>
-                                    <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
-                                    <span style="flex: 1; text-align: right; ${vWinStyle}">
-                                        <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
-                                    </span>
-                                </div>
-                            `;
-                        }).join('');
+// 3. Trigger fetch on page load and set auto-refresh interval
+window.addEventListener('DOMContentLoaded', () => {
+    fetchAndDisplayLiveMatches();
+    setInterval(fetchAndDisplayLiveMatches, 10000); // Refreshes every 10 seconds
+});
 
                         // Current Rack Active Matchup Bar
                         const currentRackNum = m.currentRack || 1;
