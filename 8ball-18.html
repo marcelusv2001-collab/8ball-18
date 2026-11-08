@@ -229,7 +229,6 @@
             height: 38px;
         }
 
-/* Pop-out Timer Modal Styles */
         #timer-modal {
             position: fixed;
             top: 0;
@@ -312,26 +311,6 @@
             border-color: #22c55e;
         }
         
-.btn-timer {
-            background: #020617;
-            color: var(--gold);
-            border: 1px solid var(--gold);
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            font-weight: bold;
-            font-family: monospace;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .btn-timer.running {
-            background: #15803d;
-            color: white;
-            border-color: #22c55e;
-        }
-        
         .btn-submit { 
             background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); 
             color: #0f172a; 
@@ -361,7 +340,6 @@
             text-align: center;
             font-size: 0.75rem;
             border-top: 1px solid #1e293b;
-    
             flex-shrink: 0;
         }
 
@@ -648,7 +626,7 @@
 
     let canvas, ctx, drawing = false;
 
-   window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', () => {
         updateActiveLeagueDisplay();
         
         const savedCode = localStorage.getItem('league_code');
@@ -694,32 +672,6 @@
         initSignaturePad();
         calculateMatchOwed();
     });
-            
-        
-        
-        
-    t savedValRun = localStorage.getItem('pay_val_run');
-        
-        if (savedMatchFee !== null) document.getElementById('weekly-match-fee').value = savedMatchFee;
-        if (savedVal8bb !== null) document.getElementById('val-8bb').value = savedVal8bb;
-        if (savedValRun !== null) document.getElementById('val-run').value = savedValRun;
-
-        const savedRosterUrl = localStorage.getItem('user_sheet_url');
-        const savedStatsUrl = localStorage.getItem('user_stats_url');
-        if (savedRosterUrl) {
-            document.getElementById('sheet-url').value = savedRosterUrl;
-            fetchRosters(savedRosterUrl, false);
-        }
-        if (savedStatsUrl) {
-            document.getElementById('stats-url').value = savedStatsUrl;
-            updateStatsButton(savedStatsUrl);
-        }
-
-        loadMatchState();
-        draw();
-        initSignaturePad();
-        calculateMatchOwed();
-    });
 
     function handleSetupToggle(event) {
         const panel = document.getElementById('setup-panel');
@@ -730,7 +682,6 @@
         }
     }
 
-// 2. Live Match Sync Function (Ensures player names, team scores, and game markers are sent)
     async function sendLiveMatchUpdate() {
         const leagueCode = localStorage.getItem('league_code');
         if (!leagueCode) return;
@@ -738,9 +689,8 @@
         const homeTeam = document.getElementById('h-team')?.value || "Home Team";
         const visitTeam = document.getElementById('v-team')?.value || "Visiting Team";
         
-        // Pull current team scores if your app calculates them, or fallback to 0
-        const homeScore = typeof calculateTeamScores === 'function' ? calculateTeamScores('h') : 0;
-        const visitScore = typeof calculateTeamScores === 'function' ? calculateTeamScores('v') : 0;
+        const homeScore = state.filter(g => g.win === 'h').length;
+        const visitScore = state.filter(g => g.win === 'v').length;
 
         const payload = {
             action: 'updateLiveMatch',
@@ -749,7 +699,7 @@
             visitTeam: visitTeam,
             homeScore: homeScore,
             visitScore: visitScore,
-            games: state, // Passes the full 18-game array containing player names (h, v) and markers
+            games: state,
             status: 'in-progress',
             lastUpdated: new Date().toISOString()
         };
@@ -781,11 +731,10 @@
             isApproved: isApproved
         }));
 
-        // Non-blocking live sync update for Spectator mode
         syncLiveMatchStateInBackground();
     }
 
-   async function syncLiveMatchStateInBackground() {
+    async function syncLiveMatchStateInBackground() {
         const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input')?.value.trim();
         if (!leagueCode) return;
 
@@ -885,7 +834,7 @@
         if (payBtnDisplay) payBtnDisplay.innerText = formattedAmount;
     }
 
-let timerInterval = null;
+    let timerInterval = null;
     let timerSeconds = 0;
     let isTimerRunning = false;
 
@@ -919,8 +868,6 @@ let timerInterval = null;
         }
     }
 
-
-    
     function resetTimer() {
         clearInterval(timerInterval);
         timerSeconds = 0;
@@ -944,7 +891,6 @@ let timerInterval = null;
         if (modalDisplay) modalDisplay.innerText = timeStr;
     }
 
-// Call this inside your DOMContentLoaded event listener and inside fetchLeagueConfig() after a successful sync
     function updateActiveLeagueDisplay() {
         const savedCode = localStorage.getItem('league_code');
         const savedName = localStorage.getItem('league_name');
@@ -1083,7 +1029,6 @@ let timerInterval = null;
             clearSignature();
             setTimeout(() => { if(window.resizeSigCanvas) window.resizeSigCanvas(); }, 50);
         } else {
-            
             visitingSignatureData = dataUrl;
             isApproved = true;
             saveMatchState();
@@ -1112,92 +1057,88 @@ let timerInterval = null;
     }
 
     async function proceedToSendText() {
-    const msg = buildMessage();
-    const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
+        const msg = buildMessage();
+        const leagueCode = localStorage.getItem('league_code') || document.getElementById('league-code-input').value.trim();
 
-    if (!leagueCode) {
-        alert("Please enter a 6-digit league code before submitting.");
-        return;
-    }
+        if (!leagueCode) {
+            alert("Please enter a 6-digit league code before submitting.");
+            return;
+        }
 
-    const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) {
-        submitBtn.innerText = '⏳ LOOKING UP...';
-        submitBtn.disabled = true;
-        submitBtn.classList.add('loading');
-    }
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) {
+            submitBtn.innerText = '⏳ LOOKING UP...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
+        }
 
-    try {
-        const lookupUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(leagueCode)}`;
-        const lookupRes = await fetch(lookupUrl);
-        const lookupData = await lookupRes.json();
+        try {
+            const lookupUrl = `${CENTRAL_DB_URL}?action=getConfig&code=${encodeURIComponent(leagueCode)}`;
+            const lookupRes = await fetch(lookupUrl);
+            const lookupData = await lookupRes.json();
 
-        if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
-            alert("Could not find a registered listener URL for league code: " + leagueCode);
+            if (lookupData.status !== 'success' || !lookupData.webhookUrl) {
+                alert("Could not find a registered listener URL for league code: " + leagueCode);
+                if (submitBtn) {
+                    submitBtn.innerText = 'Submit Match';
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('loading');
+                }
+                return;
+            }
+            const webhookUrl = lookupData.webhookUrl;
+            localStorage.setItem('league_webhook_url', webhookUrl);
+
+            if (submitBtn) submitBtn.innerText = '⏳ SENDING...';
+
+            const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
+            const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
+            
+            const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
+            const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
+            
+            const leagueTitle = localStorage.getItem('league_name') || lookupData.leagueName || "8-Ball Cash League";
+
+            const payloadData = {
+                action: 'submitMatch',
+                leagueCode: leagueCode,
+                payload: msg,
+                leagueTitle: leagueTitle,
+                homeTeam: hT,
+                homeScore: hScore,
+                visitTeam: vT,
+                visitScore: vScore,
+                games: state,
+                homeSig: homeSignatureData || '',
+                visitSig: visitingSignatureData || ''
+            };
+
+            await fetch(webhookUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payloadData)
+            });
+
+            alert('Match successfully Submitted To Your League Administrator!');
+            if (submitBtn) {
+                submitBtn.innerText = 'Submitted Successfully';
+                submitBtn.disabled = true;
+                submitBtn.classList.remove('loading');
+                submitBtn.style.display = 'none';
+            }
+            const resendBtn = document.getElementById('resend-btn');
+            if (resendBtn) resendBtn.style.display = 'block';
+
+        } catch (err) {
+            alert('Error sending match to backend: ' + err.message);
             if (submitBtn) {
                 submitBtn.innerText = 'Submit Match';
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('loading');
             }
-            return;
-        }
-        const webhookUrl = lookupData.webhookUrl;
-        localStorage.setItem('league_webhook_url', webhookUrl);
-
-        if (submitBtn) submitBtn.innerText = '⏳ SENDING...';
-
-        const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
-        const vT = (document.getElementById('v-team').value || "Visiting").toUpperCase();
-        
-        const hScore = parseInt(document.getElementById('h-score').innerText) || state.filter(g => g.win === 'h').length;
-        const vScore = parseInt(document.getElementById('v-score').innerText) || state.filter(g => g.win === 'v').length;
-        
-        const leagueTitle = localStorage.getItem('league_name') || lookupData.leagueName || "8-Ball Cash League";
-
-        // Included leagueCode in payloadData
-        const payloadData = {
-            action: 'submitMatch',
-            leagueCode: leagueCode,
-            payload: msg,
-            leagueTitle: leagueTitle,
-            homeTeam: hT,
-            homeScore: hScore,
-            visitTeam: vT,
-            visitScore: vScore,
-            games: state,
-            homeSig: homeSignatureData || '',
-            visitSig: visitingSignatureData || ''
-        };
-
-        await fetch(webhookUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8"
-            },
-            body: JSON.stringify(payloadData)
-        });
-
-        alert('Match successfully Submitted To Your League Administrator!');
-        if (submitBtn) {
-            submitBtn.innerText = 'Submitted Successfully';
-            submitBtn.disabled = true;
-            submitBtn.classList.remove('loading');
-            submitBtn.style.display = 'none';
-        }
-        const resendBtn = document.getElementById('resend-btn');
-        if (resendBtn) resendBtn.style.display = 'block';
-
-    } catch (err) {
-        alert('Error sending match to backend: ' + err.message);
-        if (submitBtn) {
-            submitBtn.innerText = 'Submit Match';
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('loading');
         }
     }
-}
-
 
     function toggleHelp() {
         const modal = document.getElementById('help-modal');
@@ -1376,7 +1317,6 @@ let timerInterval = null;
         const lines = csvText.split(/\r?\n/);
         const newRosters = {};
         const newSchedule = [];
-        const today = new Date().toISOString().split('T')[0];
         lines.forEach((line, index) => {
             if (index === 0 || !line.trim()) return; 
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/^"\vert{}"$/g, '').trim());
@@ -1586,36 +1526,11 @@ let timerInterval = null;
         calculateMatchOwed();
     }
 
-function updateActiveLeagueDisplay() {
-        const savedCode = localStorage.getItem('league_code');
-        const savedName = localStorage.getItem('league_name');
-        
-        const nameDisplay = document.getElementById('display-active-league-name');
-        const codeDisplay = document.getElementById('display-active-league-code');
-        const displayView = document.getElementById('league-display-view');
-        const inputView = document.getElementById('league-input-view');
-
-        if (savedCode) {
-            if (nameDisplay) nameDisplay.innerText = savedName || "Connected League";
-            if (codeDisplay) codeDisplay.innerText = savedCode;
-            if (displayView) displayView.style.display = 'flex';
-            if (inputView) inputView.style.display = 'none';
-        } else {
-            if (displayView) displayView.style.display = 'none';
-            if (inputView) inputView.style.display = 'block';
-        }
-    }
-
-    function showLeagueInput() {
-        document.getElementById('league-display-view').style.display = 'none';
-        document.getElementById('league-input-view').style.display = 'block';
-    }
-    
     function setExclusiveMarker(gameId, clickedKey) {
         if (isMatchApproved()) return;
         const g = state[gameId - 1];
         if (!g.h && !g.v) {
-            alert("Please select your players before choosing a winner! ");
+            alert("Please select your players before choosing a winner!");
             return;
         }
         const active = g[clickedKey];
@@ -1641,7 +1556,7 @@ function updateActiveLeagueDisplay() {
         if (isMatchApproved()) return;
         const g = state[id - 1];
         if (!g.h && !g.v) {
-            alert("Please select your players before choosing a winner! ");
+            alert("Please select your players before choosing a winner!");
             return;
         }
         
@@ -1658,9 +1573,8 @@ function updateActiveLeagueDisplay() {
         draw();
     }
 
-  async function resetBoard() {
+    async function resetBoard() {
         if(confirm("Unlock match and reset entire score sheet data?")) {
-            // Capture team names and league code BEFORE wiping local inputs
             const homeTeamVal = (document.getElementById('h-team')?.value || "").trim();
             const visitTeamVal = (document.getElementById('v-team')?.value || "").trim();
             const leagueCode = localStorage.getItem('league_code');
@@ -1685,7 +1599,6 @@ function updateActiveLeagueDisplay() {
                 }
             }
 
-            // Clear local state and reset UI controls
             isApproved = false;
             homeSignatureData = null;
             visitingSignatureData = null;
@@ -1714,6 +1627,44 @@ function updateActiveLeagueDisplay() {
             draw();
         }
     }
+
+    function startVoice(targetId, idx = null, side = null) {
+        if (isMatchApproved()) return;
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(!Speech) return;
+        const recognition = new Speech();
+        const btn = event.currentTarget;
+        recognition.onstart = () => btn.classList.add('listening');
+        recognition.onend = () => btn.classList.remove('listening');
+        recognition.onresult = (e) => {
+            const val = e.results[0][0].transcript;
+            document.getElementById(targetId).value = val;
+            if(idx !== null) {
+                state[idx][side] = val;
+                state[idx][side + 'Manual'] = true;
+            }
+            saveMatchState();
+            draw();
+        };
+        recognition.start();
+    }
+
+    function buildMessage() {
+        const hT = (document.getElementById('h-team').value || "Home").toUpperCase();
+        const vT = (document.getElementById('v-team').value || "Visit").toUpperCase();
+        let msg = `8 BALL 18 GAMES\n[HT] ${hT} (${document.getElementById('h-score').innerText})\n[VT] ${vT} (${document.getElementById('v-score').innerText})\n\n`;
+        state.forEach(g => {
+            if (g.h || g.v || g.win) {
+                const hName = (g.h || "P") + (g.hManual ? ' (NP)' : '');
+                const vName = (g.v || "P") + (g.vManual ? ' (NP)' : '');
+                const hM = (g.hTR ? ' (TR)' : '') + (g.h8B ? ' (8BB)' : '');
+                const vM = (g.vTR ? ' (TR)' : '') + (g.v8B ? ' (8BB)' : '');
+                msg += `Gm${g.id} ${hName}${g.win === 'h' ? ' (W)' : ''}${hM} vs ${vName}${g.win === 'v' ? ' (W)' : ''}${vM}\n--\n--\n`;
+            }
+        });
+        return msg;
+    }
+
     function isMatchApproved() {
         return isApproved;
     }
