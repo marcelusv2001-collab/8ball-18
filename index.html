@@ -395,7 +395,6 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
         }
 
-        /* Live Spectator Modal Component Styles */
         .live-dot {
             width: 7px;
             height: 7px;
@@ -405,10 +404,12 @@
             display: inline-block;
             animation: pulse 1.5s infinite;
         }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.4; transform: scale(1.2); }
         }
+
         .live-card {
             background: var(--bg);
             border: 1px solid var(--slate);
@@ -416,6 +417,7 @@
             padding: 8px 10px;
             margin-bottom: 8px;
         }
+
         .live-card-header {
             display: flex;
             justify-content: space-between;
@@ -424,6 +426,7 @@
             font-weight: bold;
             margin-bottom: 4px;
         }
+
         .live-team-row {
             display: flex;
             justify-content: space-between;
@@ -432,6 +435,7 @@
             font-weight: bold;
             padding: 1px 0;
         }
+
         .live-score-badge {
             background: var(--card-bg);
             color: var(--gold);
@@ -440,6 +444,7 @@
             border: 1px solid var(--slate);
             font-size: 0.85rem;
         }
+
         .active-matchup-bar {
             background: #1e293b;
             border-radius: 4px;
@@ -451,7 +456,9 @@
             font-size: 0.75rem;
             border-left: 3px solid var(--gold);
         }
+
         .active-player { font-weight: bold; color: #fff; }
+
         .game-breakdown-bar {
             display: grid;
             grid-template-columns: repeat(9, 1fr);
@@ -460,6 +467,7 @@
             padding-top: 6px;
             border-top: 1px solid var(--slate);
         }
+
         .game-pill {
             background: #020617;
             border: 1px solid #334155;
@@ -472,8 +480,10 @@
             position: relative;
             line-height: 1.1;
         }
+
         .game-pill.win-h { background: #1e3a8a; border-color: #3b82f6; color: #ffffff; }
         .game-pill.win-v { background: #7f1d1d; border-color: #ef4444; color: #ffffff; }
+
         .badge-run, .badge-8bb {
             position: absolute;
             top: -4px;
@@ -484,6 +494,7 @@
             font-weight: 900;
             line-height: 1;
         }
+
         .badge-run { background: #fbbf24; color: #000; }
         .badge-8bb { background: #22c55e; color: #000; }
 
@@ -731,7 +742,6 @@
             }
         });
 
-        // Pull Global Notice: Check Cache First -> Network Fallback
         async function showGlobalNoticeFromCache() {
             let msg = localStorage.getItem('cached_global_msg');
             const title = "📢 Global App Announcement";
@@ -758,36 +768,6 @@
             }
         }
 
-        // Modal Review Safeguards
-        function openReviewModal(idx) {
-            const match = stagedMatches[idx];
-            if (document.getElementById('edit-match-index')) document.getElementById('edit-match-index').value = idx;
-            if (document.getElementById('edit-match-payload')) document.getElementById('edit-match-payload').value = match ? match.payload : '';
-            if (document.getElementById('edit-home-sig-preview')) document.getElementById('edit-home-sig-preview').src = match ? (match.homeSig || '') : '';
-            if (document.getElementById('edit-visit-sig-preview')) document.getElementById('edit-visit-sig-preview').src = match ? (match.visitSig || '') : '';
-
-            stopSpectatorPolling();
-
-            if (match && (match.approved || match.status === 'completed')) {
-                if (document.getElementById('live-controls-panel')) {
-                    document.getElementById('live-controls-panel').style.display = 'none';
-                }
-                if (document.getElementById('archive-watermark-badge')) {
-                    document.getElementById('archive-watermark-badge').innerText = 'STATUS: ARCHIVED (READ-ONLY)';
-                }
-            } else {
-                if (document.getElementById('live-controls-panel')) {
-                    document.getElementById('live-controls-panel').style.display = 'block';
-                }
-                if (document.getElementById('archive-watermark-badge')) {
-                    document.getElementById('archive-watermark-badge').innerText = 'STATUS: STAGED / PENDING';
-                }
-            }
-
-            if (document.getElementById('review-modal')) document.getElementById('review-modal').style.display = 'flex';
-        }
-        
-        // Pull League Notice: Check Cache First -> Network Fallback
         async function showLeagueNoticeFromCache() {
             const leagueName = localStorage.getItem('league_name');
             const code = localStorage.getItem('league_code');
@@ -857,7 +837,6 @@
             document.getElementById('announcement-modal').style.display = 'none';
         }
 
-        // --- SPECTATOR & TAB CONTROL LOGIC ---
         let spectatorInterval = null;
         let currentModalTab = 'live';
         let cachedArchivedMatches = [];
@@ -907,93 +886,74 @@
             }
         }
 
-        async function loadPreviousMatch(matchId) {
+        async function fetchLiveMatches() {
+            const grid = document.getElementById('live-matches-grid');
+            const code = localStorage.getItem('league_code') || "";
+
             try {
-                stopSpectatorPolling();
-                const response = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches`);
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    const match = result.matches.find(m => m.id === matchId || m.homeTeam === matchId);
-                    if (match) {
-                        loadStationaryArchive(match);
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to load archived match:", err);
-            }
-        }
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
+                const data = await res.json();
 
-        function loadStationaryArchive(matchObject) {
-            stopSpectatorPolling();
-            if (document.getElementById('edit-match-payload')) {
-                document.getElementById('edit-match-payload').value = matchObject.payload || "Stationary Archive Record (Read-Only)";
-            }
-            if (document.getElementById('edit-home-sig-preview')) {
-                document.getElementById('edit-home-sig-preview').src = matchObject.homeSig || '';
-            }
-            if (document.getElementById('edit-visit-sig-preview')) {
-                document.getElementById('edit-visit-sig-preview').src = matchObject.visitSig || '';
-            }
-            toggleArchiveReadonlyMode(true);
-            if (document.getElementById('review-modal')) {
-                document.getElementById('review-modal').style.display = 'flex';
-            }
-        }
+                if (data.status === 'success' && data.matches && data.matches.length > 0) {
+                    grid.innerHTML = data.matches.map((m, mIdx) => {
+                        const matchId = `live_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
+                        const isOpen = openScorecards.has(matchId);
 
-        function toggleArchiveReadonlyMode(isArchive) {
-            const saveAndApproveBtn = document.querySelector('#review-modal .btn:not(.btn-secondary):not(.btn-danger)');
-            if (saveAndApproveBtn) {
-                saveAndApproveBtn.style.display = isArchive ? 'none' : 'inline-block';
-            }
-        }
-        
-// 1. Fetch live matches from Central DB
-async function fetchAndDisplayLiveMatches() {
-    const leagueCode = localStorage.getItem('league_code') || "";
-    
-    try {
-        const response = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-        const result = await response.json();
+                        const gamesHtml = (m.games || []).map((g, idx) => {
+                            let winClass = '';
+                            const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
+                            const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
+                            
+                            if (isHWin) winClass = 'win-h';
+                            if (isVWin) winClass = 'win-v';
 
-        if (result.status === 'success' && result.matches) {
-            renderLiveMatchCards(result.matches);
-        } else {
-            renderLiveMatchCards([]);
-        }
-    } catch (err) {
-        console.error("Failed to load live matches:", err);
-    }
-}
+                            let markerBadge = '';
+                            const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
+                            const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
 
-// 2. Render function that creates the HTML cards inside your container
-function renderLiveMatchCards(matches) {
-    const container = document.getElementById('live-matches-container'); 
-    if (!container) return;
+                            if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
+                            else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
 
-    if (!matches || matches.length === 0) {
-        container.innerHTML = `<p style="color: #94a3b8; text-align: center; font-size: 0.85rem;">No active live matches right now.</p>`;
-        return;
-    }
+                            return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
+                        }).join('');
 
-    container.innerHTML = matches.map(m => `
-        <div style="background: var(--slate, #1e293b); border: 1px solid var(--gold, #fbbf24); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; font-weight: bold; color: var(--gold, #fbbf24); font-size: 0.85rem; margin-bottom: 6px;">
-                <span>${m.homeTeam || 'Home'} vs ${m.visitTeam || 'Visiting'}</span>
-                <span>Score: ${m.homeScore || 0} - ${m.visitScore || 0}</span>
-            </div>
-            <div style="font-size: 0.75rem; color: #cbd5e1;">Status: In Progress (Rack ${m.currentRack || 1})</div>
-        </div>
-    `).join('');
-}
+                        const detailedGamesList = (m.games || []).map((g, idx) => {
+                            const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
+                            const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
+                            const winner = g.win;
 
-// 3. Trigger fetch on page load and set auto-refresh interval
-window.addEventListener('DOMContentLoaded', () => {
-    fetchAndDisplayLiveMatches();
-    setInterval(fetchAndDisplayLiveMatches, 10000); // Refreshes every 10 seconds
-});
+                            if (!hName && !vName && !winner) return '';
 
-                        // Current Rack Active Matchup Bar
+                            const isHWin = winner === 'h' || g.homeWin === true;
+                            const isVWin = winner === 'v' || g.visitWin === true;
+
+                            const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
+                            const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
+
+                            const hTR = g.hTR || g.homeTR ? 'TR' : '';
+                            const h8B = g.h8B || g.home8BB ? '8BB' : '';
+                            const vTR = g.vTR || g.visitTR ? 'TR' : '';
+                            const v8B = g.v8B || g.visit8BB ? '8BB' : '';
+
+                            const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
+                            const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
+
+                            const gameNumber = g.id || (idx + 1);
+
+                            return `
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
+                                    <span style="flex: 1; text-align: left; ${hWinStyle}">
+                                        ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
+                                    </span>
+                                    <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
+                                    <span style="flex: 1; text-align: right; ${vWinStyle}">
+                                        <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('');
+
                         const currentRackNum = m.currentRack || 1;
                         const activeGame = (m.games || []).find(g => g.id === currentRackNum) || (m.games || [])[currentRackNum - 1];
                         const hPlayer = activeGame ? (activeGame.h || activeGame.homePlayer || 'Home') : 'Home';
@@ -1022,7 +982,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                     ${gamesHtml}
                                 </div>
                                 <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
-                                    <button onclick="toggleScorecard('${matchId}')" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
+                                    <button onclick="toggleScorecard('${matchId}'); fetchLiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
                                         📋 View Match Scorecard ${isOpen ? '▴' : '▾'}
                                     </button>
                                     <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
@@ -1090,7 +1050,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 const matchId = `arch_${m.homeTeam}_${m.visitTeam}_${m.date}`.replace(/[^a-zA-Z0-9]/g, '_');
                 const isOpen = openScorecards.has(matchId);
 
-                // Render 18 Game Pills with Win & TR/8BB Markers
                 const gamesHtml = (m.games || []).map((g, idx) => {
                     let winClass = '';
                     const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
@@ -1109,7 +1068,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
                 }).join('');
 
-                // Detailed Scorecard Breakdown List
                 const detailedGamesList = (m.games || []).map((g, idx) => {
                     const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
                     const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
