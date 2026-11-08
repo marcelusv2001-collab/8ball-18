@@ -947,7 +947,7 @@
                 saveAndApproveBtn.style.display = isArchive ? 'none' : 'inline-block';
             }
         }
-
+        
         async function fetchLiveMatches() {
             if (currentModalTab !== 'live') return;
 
@@ -969,14 +969,21 @@
                         const matchId = `match_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
                         const isOpen = openScorecards.has(matchId);
 
+                        // Render 18 Game Pills with Win & TR/8BB Markers
                         const gamesHtml = (m.games || []).map((g, idx) => {
                             let winClass = '';
-                            if (g.win === 'h') winClass = 'win-h';
-                            if (g.win === 'v') winClass = 'win-v';
+                            const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
+                            const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
+                            
+                            if (isHWin) winClass = 'win-h';
+                            if (isVWin) winClass = 'win-v';
 
                             let markerBadge = '';
-                            if (g.h8B || g.v8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                            else if (g.hTR || g.vTR) markerBadge = '<span class="badge-run">TR</span>';
+                            const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
+                            const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
+
+                            if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
+                            else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
 
                             return `
                                 <div class="game-pill ${winClass}">
@@ -986,47 +993,67 @@
                             `;
                         }).join('');
 
-                        const detailedGamesList = (m.games || []).map(g => {
-                            if (!g.h && !g.v && !g.win) return '';
-                            const hName = g.h || '(Open)';
-                            const vName = g.v || '(Open)';
-                            const hWinClass = g.win === 'h' ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
-                            const vWinClass = g.win === 'v' ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-                            const markers = (g.hTR || g.h8B ? ' [Home: ' + (g.hTR?'TR':'') + (g.h8B?'8B':'') + ']' : '') + 
-                                            (g.vTR || g.v8B ? ' [Away: ' + (g.vTR?'TR':'') + (g.v8B?'8B':'') + ']' : '');
+                        // Detailed Scorecard Breakdown List
+                        const detailedGamesList = (m.games || []).map((g, idx) => {
+                            const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
+                            const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
+                            const winner = g.win;
+
+                            if (!hName && !vName && !winner) return '';
+
+                            const isHWin = winner === 'h' || g.homeWin === true;
+                            const isVWin = winner === 'v' || g.visitWin === true;
+
+                            const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
+                            const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
+
+                            const hTR = g.hTR || g.homeTR ? 'TR' : '';
+                            const h8B = g.h8B || g.home8BB ? '8BB' : '';
+                            const vTR = g.vTR || g.visitTR ? 'TR' : '';
+                            const v8B = g.v8B || g.visit8BB ? '8BB' : '';
+
+                            const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
+                            const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
+
+                            const gameNumber = g.id || (idx + 1);
 
                             return `
                                 <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                    <span style="color: var(--gold); min-width: 35px;">Gm ${g.id}:</span>
-                                    <span style="flex: 1; text-align: left; ${hWinClass}">${hName} ${g.win === 'h' ? '✓' : ''}</span>
+                                    <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
+                                    <span style="flex: 1; text-align: left; ${hWinStyle}">
+                                        ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
+                                    </span>
                                     <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
-                                    <span style="flex: 1; text-align: right; ${vWinClass}">${vName} ${g.win === 'v' ? '✓' : ''}</span>
-                                    <span style="font-size: 0.65rem; color: #fbbf24; margin-left: 6px;">${markers}</span>
+                                    <span style="flex: 1; text-align: right; ${vWinStyle}">
+                                        <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
+                                    </span>
                                 </div>
                             `;
                         }).join('');
 
-                        const activeGame = (m.games || []).find(g => g.id === m.currentRack) || (m.games || [])[(m.currentRack || 1) - 1];
-                        const hPlayer = activeGame && activeGame.h ? activeGame.h : 'Home';
-                        const vPlayer = activeGame && activeGame.v ? activeGame.v : 'Away';
+                        // Current Rack Active Matchup Bar
+                        const currentRackNum = m.currentRack || 1;
+                        const activeGame = (m.games || []).find(g => g.id === currentRackNum) || (m.games || [])[currentRackNum - 1];
+                        const hPlayer = activeGame ? (activeGame.h || activeGame.homePlayer || 'Home') : 'Home';
+                        const vPlayer = activeGame ? (activeGame.v || activeGame.visitPlayer || 'Away') : 'Away';
 
                         return `
                             <div class="live-card">
                                 <div class="live-card-header">
-                                    <span>MATCH #${mIdx + 1} — GAME ${m.currentRack || 1} OF 18</span>
+                                    <span>MATCH #${mIdx + 1} — GAME ${currentRackNum} OF 18</span>
                                     <span style="color: #22c55e;">● LIVE</span>
                                 </div>
                                 <div class="live-team-row">
-                                    <span>${m.homeTeam}</span>
-                                    <span class="live-score-badge">${m.homeScore}</span>
+                                    <span>${m.homeTeam || 'Home Team'}</span>
+                                    <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
                                 </div>
                                 <div class="live-team-row">
-                                    <span>${m.visitTeam}</span>
-                                    <span class="live-score-badge">${m.visitScore}</span>
+                                    <span>${m.visitTeam || 'Visiting Team'}</span>
+                                    <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
                                 </div>
                                 <div class="active-matchup-bar">
                                     <span class="active-player" style="color: #60a5fa;">${hPlayer}</span>
-                                    <span style="color: var(--gold); font-size: 0.65rem; font-weight: bold;">GM ${m.currentRack || 1}</span>
+                                    <span style="color: var(--gold); font-size: 0.65rem; font-weight: bold;">GM ${currentRackNum}</span>
                                     <span class="active-player" style="color: #f87171;">${vPlayer}</span>
                                 </div>
                                 <div class="game-breakdown-bar">
@@ -1036,7 +1063,7 @@
                                     <button onclick="toggleScorecard('${matchId}')" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
                                         📋 View Match Scorecard ${isOpen ? '▴' : '▾'}
                                     </button>
-                                    <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 150px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
+                                    <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
                                         ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded yet.</p>'}
                                     </div>
                                 </div>
@@ -1101,34 +1128,59 @@
                 const matchId = `arch_${m.homeTeam}_${m.visitTeam}_${m.date}`.replace(/[^a-zA-Z0-9]/g, '_');
                 const isOpen = openScorecards.has(matchId);
 
+                // Render 18 Game Pills with Win & TR/8BB Markers
                 const gamesHtml = (m.games || []).map((g, idx) => {
                     let winClass = '';
-                    if (g.win === 'h') winClass = 'win-h';
-                    if (g.win === 'v') winClass = 'win-v';
+                    const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
+                    const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
+                    
+                    if (isHWin) winClass = 'win-h';
+                    if (isVWin) winClass = 'win-v';
 
                     let markerBadge = '';
-                    if (g.h8B || g.v8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                    else if (g.hTR || g.vTR) markerBadge = '<span class="badge-run">TR</span>';
+                    const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
+                    const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
+
+                    if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
+                    else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
 
                     return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
                 }).join('');
 
-                const detailedGamesList = (m.games || []).map(g => {
-                    if (!g.h && !g.v && !g.win) return '';
-                    const hName = g.h || '(Open)';
-                    const vName = g.v || '(Open)';
-                    const hWinClass = g.win === 'h' ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
-                    const vWinClass = g.win === 'v' ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-                    const markers = (g.hTR || g.h8B ? ' [Home: ' + (g.hTR?'TR':'') + (g.h8B?'8B':'') + ']' : '') + 
-                                    (g.vTR || g.v8B ? ' [Away: ' + (g.vTR?'TR':'') + (g.v8B?'8B':'') + ']' : '');
+                // Detailed Scorecard Breakdown List
+                const detailedGamesList = (m.games || []).map((g, idx) => {
+                    const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
+                    const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
+                    const winner = g.win;
+
+                    if (!hName && !vName && !winner) return '';
+
+                    const isHWin = winner === 'h' || g.homeWin === true;
+                    const isVWin = winner === 'v' || g.visitWin === true;
+
+                    const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
+                    const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
+
+                    const hTR = g.hTR || g.homeTR ? 'TR' : '';
+                    const h8B = g.h8B || g.home8BB ? '8BB' : '';
+                    const vTR = g.vTR || g.visitTR ? 'TR' : '';
+                    const v8B = g.v8B || g.visit8BB ? '8BB' : '';
+
+                    const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
+                    const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
+
+                    const gameNumber = g.id || (idx + 1);
 
                     return `
                         <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--gold); min-width: 35px;">Gm ${g.id}:</span>
-                            <span style="flex: 1; text-align: left; ${hWinClass}">${hName} ${g.win === 'h' ? '✓' : ''}</span>
+                            <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
+                            <span style="flex: 1; text-align: left; ${hWinStyle}">
+                                ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
+                            </span>
                             <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
-                            <span style="flex: 1; text-align: right; ${vWinClass}">${vName} ${g.win === 'v' ? '✓' : ''}</span>
-                            <span style="font-size: 0.65rem; color: #fbbf24; margin-left: 6px;">${markers}</span>
+                            <span style="flex: 1; text-align: right; ${vWinStyle}">
+                                <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
+                            </span>
                         </div>
                     `;
                 }).join('');
@@ -1136,16 +1188,16 @@
                 return `
                     <div class="live-card" style="border-color: #475569;">
                         <div class="live-card-header">
-                            <span>APPROVED — ${m.date}</span>
+                            <span>APPROVED — ${m.date || 'COMPLETED'}</span>
                             <span style="color: #38bdf8;">OFFICIAL</span>
                         </div>
                         <div class="live-team-row">
-                            <span>${m.homeTeam}</span>
-                            <span class="live-score-badge">${m.homeScore}</span>
+                            <span>${m.homeTeam || 'Home Team'}</span>
+                            <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
                         </div>
                         <div class="live-team-row">
-                            <span>${m.visitTeam}</span>
-                            <span class="live-score-badge">${m.visitScore}</span>
+                            <span>${m.visitTeam || 'Visiting Team'}</span>
+                            <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
                         </div>
                         <div class="game-breakdown-bar" style="margin-top: 8px;">
                             ${gamesHtml}
@@ -1154,7 +1206,7 @@
                             <button onclick="toggleScorecard('${matchId}'); renderArchiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
                                 📋 View Official Scorecard ${isOpen ? '▴' : '▾'}
                             </button>
-                            <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 150px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
+                            <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
                                 ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded.</p>'}
                             </div>
                         </div>
