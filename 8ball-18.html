@@ -1012,7 +1012,7 @@
         }
     }
 
-    async function pollRemoteMatchStatus() {
+        async function pollRemoteMatchStatus() {
         const leagueCode = localStorage.getItem('league_code');
         if (!leagueCode || !navigator.onLine) return;
 
@@ -1030,7 +1030,7 @@
                 );
 
                 if (found) {
-                    // Check if someone else is requesting takeover from US (if we are active scorekeeper)
+                    // 1. Check if someone is requesting takeover from US
                     if (myRole !== 'spectator' && myRole !== '' && found.takeoverRequester && found.takeoverRequester !== myScorekeeperName) {
                         if (activeTakeoverRequester !== found.takeoverRequester) {
                             activeTakeoverRequester = found.takeoverRequester;
@@ -1038,17 +1038,40 @@
                         }
                     }
 
-                    // If we are spectator, check if active scorekeeper changed
-                    if (myRole === 'spectator' && found.scorekeeperName && (!activeScorekeeperInfo || activeScorekeeperInfo.name !== found.scorekeeperName)) {
-                        activeScorekeeperInfo = {
-                            name: found.scorekeeperName,
-                            side: found.scorekeeperSide
-                        };
-                        localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
-                        draw();
+                    // 2. If we are spectator, seamlessly update scores & game grid without stealing scroll focus
+                    if (myRole === 'spectator') {
+                        if (found.scorekeeperName && (!activeScorekeeperInfo || activeScorekeeperInfo.name !== found.scorekeeperName)) {
+                            activeScorekeeperInfo = {
+                                name: found.scorekeeperName,
+                                side: found.scorekeeperSide
+                            };
+                            localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                        }
+
+                        if (found.games && Array.isArray(found.games)) {
+                            // Check if remote games differ from local state before redrawing
+                            const remoteString = JSON.stringify(found.games);
+                            const localString = JSON.stringify(state);
+                            if (remoteString !== localString) {
+                                state = found.games;
+                                
+                                // Preserve scroll position during seamless spectator refresh
+                                const scoringInterface = document.getElementById('scoring-interface');
+                                const currentScrollTop = scoringInterface ? scoringInterface.scrollTop : 0;
+                                
+                                draw();
+                                
+                                if (scoringInterface) {
+                                    scoringInterface.scrollTop = currentScrollTop;
+                                }
+                            } else {
+                                // Just update role banner text if needed without touching scroll
+                                renderRoleStatusBar();
+                            }
+                        }
                     }
 
-                    // If we requested takeover and our 20s expired or were granted:
+                    // 3. If we requested takeover and our request was granted:
                     if (myRole === 'spectator' && found.scorekeeperName === myScorekeeperName) {
                         myRole = found.scorekeeperSide;
                         localStorage.setItem('active_match_role', myRole);
@@ -1059,6 +1082,7 @@
             }
         } catch (e) {}
     }
+
 
     function showTakeoverAlertModal(requesterName, side) {
         document.getElementById('takeover-alert-text').innerText = 
