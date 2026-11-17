@@ -1954,6 +1954,14 @@
         }
     }
 
+function handleTeamSpectateClick(teamName) {
+    // If you want spectators clicking a team to lock their view onto that side:
+    if (myRole === 'spectator') {
+        console.log("Spectating team: " + teamName);
+        // Add visual filtering or highlight logic here if desired
+    }
+}
+    
     function startVoice(targetId, idx = null, side = null) {
         if (!canEditMatch()) return;
         const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
