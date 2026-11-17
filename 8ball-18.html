@@ -62,7 +62,7 @@
             display: none; padding: 20px; overflow-y: auto;
         }
 
-        #update-modal, #role-select-modal {
+        #update-modal, #role-select-modal, #takeover-alert-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -453,10 +453,10 @@
 <!-- ROLE & SCOREKEEPER SELECTION MODAL -->
 <div id="role-select-modal">
     <div class="modal-content" style="text-align: center; max-width: 400px;">
-        <h2 style="margin-bottom: 8px;">🏆 Match Role & Scorekeeper</h2>
+        <h2 style="margin-bottom: 8px;">🏆 Claim Scorekeeper Role</h2>
         <div id="active-sk-warning" class="active-sk-alert"></div>
         <p style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 14px;">
-            Choose your team to keep score, or watch live in read-only spectator mode.
+            Select your team to keep score. The opposing team will automatically enter spectator mode.
         </p>
 
         <!-- Step 1: Choose Role -->
@@ -466,9 +466,6 @@
             </button>
             <button type="button" class="role-btn" onclick="selectScorekeeperSide('visitor')" style="background: #7f1d1d; color: #fff; border: 1px solid #ef4444;">
                 🚗 Visiting (<span id="prompt-visit-name">Visiting Team</span>) - Scorekeeper
-            </button>
-            <button type="button" class="role-btn" onclick="confirmMatchRole('spectator', '')" style="background: #0f172a; color: var(--gold); border: 1px solid var(--gold); margin-top: 4px;">
-                👀 Just Watch (Spectator Only)
             </button>
         </div>
 
@@ -487,6 +484,19 @@
     </div>
 </div>
 
+<!-- TAKEOVER 20-SECOND COUNTDOWN ALERT MODAL -->
+<div id="takeover-alert-modal">
+    <div class="modal-content" style="text-align: center; max-width: 400px;">
+        <h2 style="color: var(--gold);">⚠️ Takeover Request</h2>
+        <p id="takeover-alert-text" style="font-size: 0.9rem; margin: 12px 0;">Another user is requesting scorekeeping control.</p>
+        <div id="takeover-countdown-display" style="font-size: 2.5rem; font-weight: 900; color: #ef4444; font-family: monospace; margin: 15px 0;">20s</div>
+        <div class="modal-btn-row">
+            <button type="button" class="modal-btn btn-modal-cancel" onclick="denyTakeoverRequest()">Keep Control</button>
+            <button type="button" class="modal-btn btn-modal-apply" onclick="releaseTakeoverControl()" style="background: #ef4444; color: white;">Release Now</button>
+        </div>
+    </div>
+</div>
+
 <!-- EXPANDED HELP & INSTRUCTIONS MODAL -->
 <div id="help-modal">
     <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
@@ -498,11 +508,11 @@
             <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">1. Connect & Sync League Data</h3>
             <p>• Click <b>⚙️ SETUP</b> at the top of the screen.</p>
             <p>• Enter your official <b>6-Digit League Code</b> in the box and tap <b>Sync</b>.</p>
-            <p>• Tap <b>START</b> to pick your match date, select your matchup, and choose whether you are keeping score (Home/Visiting) or watching as a Spectator.</p>
+            <p>• Tap <b>START</b> to pick your match date, select your matchup, and claim your scorekeeper role.</p>
 
-            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">2. Single Scorekeeper & Take Over</h3>
-            <p>• Only one active scorekeeper edits the sheet at a time while spectators view live updates in read-only mode.</p>
-            <p>• Need to hand off scoring? Any spectator can tap <b>Take Over</b> on the top banner to assume scorekeeper control.</p>
+            <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">2. Auto-Spectator & 20-Second Takeover</h3>
+            <p>• The moment one team claims scorekeeping, the other team is <b>automatically placed into read-only spectator mode</b>.</p>
+            <p>• Need to take over scoring? Tap <b>Take Over</b> on the top banner. If the current scorekeeper doesn't respond or release control within <b>20 seconds</b>, control automatically transfers to you.</p>
 
             <h3 style="color: var(--gold); font-size: 0.95rem; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px;">3. Score Games & Special Runs</h3>
             <p>• <b>Assigning Wins:</b> Tap the <b>W</b> button on the far right of any game row to cycle the winner:
@@ -658,7 +668,7 @@
 </details>
     
 <main id="scoring-interface">
-    <!-- Spectator / Scorekeeper Status Bar -->
+    <!-- Auto Spectator / Scorekeeper Status Bar -->
     <div id="role-status-bar"></div>
 
     <div class="team-banner">
@@ -706,12 +716,17 @@
     let visitingSignatureData = null;
     let currentSigningRole = 'home';
 
-    // Role & Scorekeeper Management State
-    let myRole = localStorage.getItem('active_match_role') || 'home'; // 'home', 'visitor', or 'spectator'
+    // Role & Scorekeeper Management State (Auto Spectator Logic)
+    let myRole = localStorage.getItem('active_match_role') || ''; // 'home', 'visitor', or 'spectator'
     let myScorekeeperName = localStorage.getItem('active_scorekeeper_name') || '';
     let activeScorekeeperInfo = JSON.parse(localStorage.getItem('remote_active_scorekeeper') || 'null');
     let pendingRoleSide = '';
     let pendingSyncQueue = false;
+
+    // Takeover 20-second timer variables
+    let takeoverTimer = null;
+    let takeoverCountdown = 20;
+    let activeTakeoverRequester = null;
 
     let state = Array.from({length: 18}, (_, i) => ({
         id: i + 1, h: "", v: "", hTR: false, h8B: false, vTR: false, v8B: false, win: null, hManual: false, vManual: false
@@ -768,6 +783,9 @@
         draw();
         initSignaturePad();
         calculateMatchOwed();
+
+        // Start background poller to check remote active scorekeeper & takeover sync
+        setInterval(pollRemoteMatchStatus, 4000);
     });
 
     // --- OFFLINE / ONLINE LISTENERS ---
@@ -799,9 +817,9 @@
         if (banner) banner.remove();
     }
 
-    // --- ROLE & SCOREKEEPER MODAL LOGIC ---
+    // --- ROLE & AUTO-SPECTATOR / TAKEOVER LOGIC ---
     function canEditMatch() {
-        return !isApproved && (myRole === 'home' || myRole === 'visitor');
+        return !isApproved && myRole !== 'spectator' && myRole !== '';
     }
 
     function openRoleSelectionModal(existingScorekeeper = null) {
@@ -814,7 +832,7 @@
         const warningBox = document.getElementById('active-sk-warning');
         if (existingScorekeeper && existingScorekeeper.name) {
             const sideLabel = existingScorekeeper.side === 'home' ? 'Home Team' : 'Visiting Team';
-            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is currently active as scorekeeper. Do you want to take over or watch as a spectator?`;
+            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is currently keeping score. Claiming scorekeeper role will transition them to spectator mode.`;
             warningBox.style.display = 'block';
         } else {
             warningBox.style.display = 'none';
@@ -887,17 +905,190 @@
         localStorage.setItem('active_match_role', myRole);
         localStorage.setItem('active_scorekeeper_name', myScorekeeperName);
 
-        if (role === 'home' || role === 'visitor') {
-            activeScorekeeperInfo = {
-                name: myScorekeeperName,
-                side: role
-            };
-            localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
-        }
+        activeScorekeeperInfo = {
+            name: myScorekeeperName,
+            side: role
+        };
+        localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
 
         document.getElementById('role-select-modal').style.display = 'none';
         saveMatchState();
         draw();
+    }
+
+    // --- 20-SECOND TAKEOVER LOGIC ---
+    function requestTakeover() {
+        if (!navigator.onLine) {
+            alert("You must be online to request scorekeeper takeover.");
+            return;
+        }
+
+        const hTeam = document.getElementById('h-team').value || "Home Team";
+        const vTeam = document.getElementById('v-team').value || "Visiting Team";
+
+        // Prompt user whether they are taking over as Home or Visiting team
+        const sideChoice = confirm(`Click OK for Home Team (${hTeam}) scorekeeper control, or Cancel for Visiting Team (${vTeam}) control.`) ? 'home' : 'visitor';
+        
+        // Prompt for player name
+        let pName = prompt("Enter your name for scorekeeping takeover:", myScorekeeperName || "");
+        if (!pName) return;
+
+        myScorekeeperName = pName;
+        pendingRoleSide = sideChoice;
+
+        // Broadcast takeover request
+        sendTakeoverRequestToCloud(sideChoice, pName);
+    }
+
+    async function sendTakeoverRequestToCloud(side, name) {
+        const leagueCode = localStorage.getItem('league_code');
+        if (!leagueCode) return;
+
+        const hT = document.getElementById('h-team')?.value || "Home Team";
+        const vT = document.getElementById('v-team')?.value || "Visiting Team";
+
+        const payload = {
+            action: 'requestTakeover',
+            leagueCode: leagueCode,
+            homeTeam: hT,
+            visitTeam: vT,
+            requesterName: name,
+            requesterSide: side,
+            timestamp: Date.now()
+        };
+
+        try {
+            await fetch(CENTRAL_DB_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+            alert("Takeover request sent! If the current scorekeeper does not release control within 20 seconds, control will automatically transfer to you.");
+        } catch (e) {
+            console.error("Takeover request failed", e);
+        }
+    }
+
+    async function pollRemoteMatchStatus() {
+        const leagueCode = localStorage.getItem('league_code');
+        if (!leagueCode || !navigator.onLine) return;
+
+        const hT = document.getElementById('h-team')?.value || "";
+        const vT = document.getElementById('v-team')?.value || "";
+        if (!hT && !vT) return;
+
+        try {
+            const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+            const data = await res.json();
+            if (data.status === 'success' && Array.isArray(data.matches)) {
+                const found = data.matches.find(m => 
+                    (m.homeTeam || '').toUpperCase() === hT.toUpperCase() &&
+                    (m.visitTeam || '').toUpperCase() === vT.toUpperCase()
+                );
+
+                if (found) {
+                    // Check if someone else is requesting takeover from US (if we are active scorekeeper)
+                    if (myRole !== 'spectator' && myRole !== '' && found.takeoverRequester && found.takeoverRequester !== myScorekeeperName) {
+                        if (activeTakeoverRequester !== found.takeoverRequester) {
+                            activeTakeoverRequester = found.takeoverRequester;
+                            showTakeoverAlertModal(found.takeoverRequester, found.takeoverSide);
+                        }
+                    }
+
+                    // If we are spectator, check if active scorekeeper changed
+                    if (myRole === 'spectator' && found.scorekeeperName && (!activeScorekeeperInfo || activeScorekeeperInfo.name !== found.scorekeeperName)) {
+                        activeScorekeeperInfo = {
+                            name: found.scorekeeperName,
+                            side: found.scorekeeperSide
+                        };
+                        localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                        draw();
+                    }
+
+                    // If we requested takeover and our 20s expired or were granted:
+                    if (myRole === 'spectator' && found.scorekeeperName === myScorekeeperName) {
+                        myRole = found.scorekeeperSide;
+                        localStorage.setItem('active_match_role', myRole);
+                        hideTakeoverAlertModal();
+                        draw();
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    function showTakeoverAlertModal(requesterName, side) {
+        document.getElementById('takeover-alert-text').innerText = 
+            `⚠️ ${requesterName} is requesting scorekeeping control. If you do not release or respond, control will automatically transfer in 20 seconds.`;
+        
+        document.getElementById('takeover-alert-modal').style.display = 'flex';
+        takeoverCountdown = 20;
+        document.getElementById('takeover-countdown-display').innerText = takeoverCountdown + 's';
+
+        clearInterval(takeoverTimer);
+        takeoverTimer = setInterval(() => {
+            takeoverCountdown--;
+            document.getElementById('takeover-countdown-display').innerText = takeoverCountdown + 's';
+            if (takeoverCountdown <= 0) {
+                clearInterval(takeoverTimer);
+                // 20 seconds expired without response -> Automatic release!
+                releaseTakeoverControlDueToTimeout();
+            }
+        }, 1000);
+    }
+
+    function hideTakeoverAlertModal() {
+        clearInterval(takeoverTimer);
+        document.getElementById('takeover-alert-modal').style.display = 'none';
+    }
+
+    function denyTakeoverRequest() {
+        hideTakeoverAlertModal();
+        // Clear requester on backend so they know we denied
+        sendTakeoverResolutionToCloud(false);
+    }
+
+    function releaseTakeoverControl() {
+        hideTakeoverAlertModal();
+        myRole = 'spectator';
+        localStorage.setItem('active_match_role', 'spectator');
+        sendTakeoverResolutionToCloud(true);
+        draw();
+    }
+
+    function releaseTakeoverControlDueToTimeout() {
+        hideTakeoverAlertModal();
+        myRole = 'spectator';
+        localStorage.setItem('active_match_role', 'spectator');
+        sendTakeoverResolutionToCloud(true);
+        draw();
+    }
+
+    async function sendTakeoverResolutionToCloud(accepted) {
+        const leagueCode = localStorage.getItem('league_code');
+        if (!leagueCode) return;
+
+        const hT = document.getElementById('h-team')?.value || "Home Team";
+        const vT = document.getElementById('v-team')?.value || "Visiting Team";
+
+        const payload = {
+            action: 'resolveTakeover',
+            leagueCode: leagueCode,
+            homeTeam: hT,
+            visitTeam: vT,
+            accepted: accepted,
+            previousScorekeeper: myScorekeeperName
+        };
+
+        try {
+            await fetch(CENTRAL_DB_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {}
     }
 
     function renderRoleStatusBar() {
@@ -911,14 +1102,14 @@
             return;
         }
 
-        if (myRole === 'spectator') {
+        if (myRole === 'spectator' || !myRole) {
             const skText = activeScorekeeperInfo && activeScorekeeperInfo.name
-                ? `Scorekeeper: ${activeScorekeeperInfo.name} (${activeScorekeeperInfo.side === 'home' ? 'Home' : 'Away'})`
-                : 'Read-Only Spectator Mode';
+                ? `Active Scorekeeper: ${activeScorekeeperInfo.name} (${activeScorekeeperInfo.side === 'home' ? 'Home' : 'Away'})`
+                : 'No active scorekeeper yet (Claim role below or watch live)';
             bar.innerHTML = `
                 <div class="spectator-banner">
-                    <span>👀 ${skText}</span>
-                    <button type="button" class="btn-takeover" onclick="openRoleSelectionModal(activeScorekeeperInfo)">Take Over</button>
+                    <span>👀 Spectator Mode: ${skText}</span>
+                    <button type="button" class="btn-takeover" onclick="requestTakeover()">Take Over</button>
                 </div>
             `;
         } else {
@@ -926,7 +1117,7 @@
             const skLabel = myScorekeeperName ? `${myScorekeeperName} (${sideText})` : sideText;
             bar.innerHTML = `
                 <div class="spectator-banner" style="border-color: #22c55e; color: #86efac;">
-                    <span>✍️ Active Scorekeeper: ${skLabel}</span>
+                    <span>✍️ Active Scorekeeper: ${skLabel} (Opponent in Spectator Mode)</span>
                     <button type="button" class="btn-takeover" style="background: #334155; color: #f8fafc;" onclick="openRoleSelectionModal(activeScorekeeperInfo)">Switch Role</button>
                 </div>
             `;
@@ -968,7 +1159,7 @@
         }
 
         // Only push remote live updates if this device is the active scorekeeper
-        if (myRole === 'home' || myRole === 'visitor') {
+        if (canEditMatch()) {
             syncLiveMatchStateInBackground();
         }
     }
@@ -1703,7 +1894,7 @@
     }
 
     function clearSelectedMatch() {
-        if (!canEditMatch()) return;
+        if (!canEditMatch() && myRole !== '') return;
         document.getElementById('h-team').value = "";
         document.getElementById('v-team').value = "";
         document.getElementById('clear-match-btn').style.display = 'none';
@@ -1756,7 +1947,7 @@
             input.readOnly = true; 
             const hVal = document.getElementById('h-team').value;
             const vVal = document.getElementById('v-team').value;
-            if (idx === null && hVal && vVal && !myScorekeeperName && myRole !== 'spectator') {
+            if (idx === null && hVal && vVal && !myScorekeeperName && myRole === '') {
                 openRoleSelectionModal(null);
             }
         };
@@ -1769,7 +1960,7 @@
         closeAllDropdowns(); 
         const hVal = document.getElementById('h-team').value;
         const vVal = document.getElementById('v-team').value;
-        if (hVal && vVal && !myScorekeeperName && myRole !== 'spectator') {
+        if (hVal && vVal && !myScorekeeperName && myRole === '') {
             openRoleSelectionModal(null);
         }
     }
@@ -1795,27 +1986,27 @@
                 <div class="game-num">${g.id}</div>
                 <div class="player-box ${g.win === 'h' ? 'win-home' : ''}">
                     <div class="p-input-wrap">
-                        <input type="text" id="h-in-${g.id}" placeholder="Home" value="${g.h}" readonly style="${readOnlyStyle}" onclick="showPlayerDropdown(event, 'h', ${i})">
+                        <input type="text" id="h-in-${g.id}" placeholder="Home" value="${g.h}" readonly style="${readOnlyStyle}" onclick="if(canEditMatch()) showPlayerDropdown(event, 'h', ${i})">
                         <div id="h-menu-${i}" class="custom-dropdown"></div>
-                        <button type="button" class="voice-btn" style="font-size:0.8rem; ${readOnlyStyle}" onclick="startVoice('h-in-${g.id}', ${i}, 'h')">🎤</button>
+                        <button type="button" class="voice-btn" style="font-size:0.8rem; ${readOnlyStyle}" onclick="if(canEditMatch()) startVoice('h-in-${g.id}', ${i}, 'h')">🎤</button>
                     </div>
                     <div class="markers">
-                        <span class="marker ${g.hTR?'on':''}" style="${readOnlyStyle}" onclick="setExclusiveMarker(${g.id}, 'hTR')">Run</span>
-                        <span class="marker ${g.h8B?'on':''}" style="${readOnlyStyle}" onclick="setExclusiveMarker(${g.id}, 'h8B')">8B</span>
+                        <span class="marker ${g.hTR?'on':''}" style="${readOnlyStyle}" onclick="if(canEditMatch()) setExclusiveMarker(${g.id}, 'hTR')">Run</span>
+                        <span class="marker ${g.h8B?'on':''}" style="${readOnlyStyle}" onclick="if(canEditMatch()) setExclusiveMarker(${g.id}, 'h8B')">8B</span>
                     </div>
                 </div>
                 <div class="player-box ${g.win === 'v' ? 'win-visit' : ''}">
                     <div class="p-input-wrap">
-                        <input type="text" id="v-in-${g.id}" placeholder="Visit" value="${g.v}" readonly style="${readOnlyStyle}" onclick="showPlayerDropdown(event, 'v', ${i})">
+                        <input type="text" id="v-in-${g.id}" placeholder="Visit" value="${g.v}" readonly style="${readOnlyStyle}" onclick="if(canEditMatch()) showPlayerDropdown(event, 'v', ${i})">
                         <div id="v-menu-${i}" class="custom-dropdown"></div>
-                        <button type="button" class="voice-btn" style="font-size:0.8rem; ${readOnlyStyle}" onclick="startVoice('v-in-${g.id}', ${i}, 'v')">🎤</button>
+                        <button type="button" class="voice-btn" style="font-size:0.8rem; ${readOnlyStyle}" onclick="if(canEditMatch()) startVoice('v-in-${g.id}', ${i}, 'v')">🎤</button>
                     </div>
                     <div class="markers">
-                        <span class="marker ${g.vTR?'on':''}" style="${readOnlyStyle}" onclick="setExclusiveMarker(${g.id}, 'vTR')">Run</span>
-                        <span class="marker ${g.v8B?'on':''}" style="${readOnlyStyle}" onclick="setExclusiveMarker(${g.id}, 'v8B')">8B</span>
+                        <span class="marker ${g.vTR?'on':''}" style="${readOnlyStyle}" onclick="if(canEditMatch()) setExclusiveMarker(${g.id}, 'vTR')">Run</span>
+                        <span class="marker ${g.v8B?'on':''}" style="${readOnlyStyle}" onclick="if(canEditMatch()) setExclusiveMarker(${g.id}, 'v8B')">8B</span>
                     </div>
                 </div>
-                <div class="win-btn ${g.win||''}" style="${readOnlyStyle}" onclick="cycleWin(${g.id})">${g.win ? g.win.toUpperCase() : 'W'}</div>
+                <div class="win-btn ${g.win||''}" style="${readOnlyStyle}" onclick="if(canEditMatch()) cycleWin(${g.id})">${g.win ? g.win.toUpperCase() : 'W'}</div>
             </div>
         `).join('');
         document.getElementById('h-score').innerText = state.filter(g => g.win === 'h').length;
@@ -1827,12 +2018,20 @@
         const submitBtn = document.getElementById('submit-btn');
         const resendBtn = document.getElementById('resend-btn');
         
-        if (isApproved) {
-            scoringArea.classList.add('locked');
-            footerArea.classList.add('locked');
-            setupPanel.classList.add('locked');
-            if (submitBtn) submitBtn.style.display = 'none';
-            if (resendBtn) resendBtn.style.display = 'block';
+        if (isApproved || !editable) {
+            if (isApproved) {
+                scoringArea.classList.add('locked');
+                footerArea.classList.add('locked');
+                setupPanel.classList.add('locked');
+            } else {
+                scoringArea.classList.remove('locked');
+                footerArea.classList.remove('locked');
+                setupPanel.classList.remove('locked');
+            }
+            if (isApproved) {
+                if (submitBtn) submitBtn.style.display = 'none';
+                if (resendBtn) resendBtn.style.display = 'block';
+            }
         } else {
             scoringArea.classList.remove('locked');
             footerArea.classList.remove('locked');
@@ -1920,7 +2119,7 @@
             isApproved = false;
             homeSignatureData = null;
             visitingSignatureData = null;
-            myRole = 'home';
+            myRole = '';
             myScorekeeperName = '';
             activeScorekeeperInfo = null;
 
@@ -1953,14 +2152,6 @@
             draw();
         }
     }
-
-function handleTeamSpectateClick(teamName) {
-    // If you want spectators clicking a team to lock their view onto that side:
-    if (myRole === 'spectator') {
-        console.log("Spectating team: " + teamName);
-        // Add visual filtering or highlight logic here if desired
-    }
-}
     
     function startVoice(targetId, idx = null, side = null) {
         if (!canEditMatch()) return;
