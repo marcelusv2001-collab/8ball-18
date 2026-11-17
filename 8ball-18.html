@@ -1845,54 +1845,84 @@
     }
 
     async function applyPopupMatchSelection() {
-        if (isMatchApproved()) {
-            closeMatchPickerModal();
-            return;
-        }
-        const date = document.getElementById('popup-week-selector').value;
-        const matchIdx = document.getElementById('popup-match-selector').value;
-        if (!date || matchIdx === "") {
-            alert("Please select both a date and a match.");
-            return;
-        }
-        const selected = MASTER_SCHEDULE.filter(s => s.date === date)[matchIdx];
-        if (selected) {
-            document.getElementById('h-team').value = selected.home;
-            document.getElementById('v-team').value = selected.visit;
-            document.getElementById('clear-match-btn').style.display = 'block';
-            
-            closeMatchPickerModal();
-
-            // Check if another device is already registered as scorekeeper for this matchup
-            let existingSk = null;
-            const leagueCode = localStorage.getItem('league_code');
-            if (leagueCode && navigator.onLine) {
-                try {
-                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-                    const data = await res.json();
-                    if (data.status === 'success' && Array.isArray(data.matches)) {
-                        const found = data.matches.find(m => 
-                            (m.homeTeam || '').toUpperCase() === selected.home.toUpperCase() &&
-                            (m.visitTeam || '').toUpperCase() === selected.visit.toUpperCase()
-                        );
-                        if (found && found.scorekeeperName) {
-                            existingSk = {
-                                name: found.scorekeeperName,
-                                side: found.scorekeeperSide || 'home'
-                            };
-                            activeScorekeeperInfo = existingSk;
-                            localStorage.setItem('remote_active_scorekeeper', JSON.stringify(existingSk));
-                        }
-                    }
-                } catch (e) {}
-            }
-
-            openRoleSelectionModal(existingSk);
-        } else {
-            closeMatchPickerModal();
-        }
+    if (isMatchApproved()) {
+        closeMatchPickerModal();
+        return;
     }
+    const date = document.getElementById('popup-week-selector').value;
+    const matchIdx = document.getElementById('popup-match-selector').value;
+    if (!date || matchIdx === "") {
+        alert("Please select both a date and a match.");
+        return;
+    }
+    const selected = MASTER_SCHEDULE.filter(s => s.date === date)[matchIdx];
+    if (selected) {
+        document.getElementById('h-team').value = selected.home;
+        document.getElementById('v-team').value = selected.visit;
+        document.getElementById('clear-match-btn').style.display = 'block';
+        
+        closeMatchPickerModal();
 
+        // Check if another device already has an active scorekeeper for this matchup
+        let existingSk = null;
+        const leagueCode = localStorage.getItem('league_code');
+        if (leagueCode && navigator.onLine) {
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                const data = await res.json();
+                if (data.status === 'success' && Array.isArray(data.matches)) {
+                    const found = data.matches.find(m => 
+                        (m.homeTeam || '').toUpperCase() === selected.home.toUpperCase() &&
+                        (m.visitTeam || '').toUpperCase() === selected.visit.toUpperCase()
+                    );
+                    
+                    if (found && found.scorekeeperName && found.scorekeeperSide) {
+                        existingSk = {
+                            name: found.scorekeeperName,
+                            side: found.scorekeeperSide
+                        };
+                    }
+                }
+            } catch (e) {
+                console.error("Could not verify active match state", e);
+            }
+        }
+
+        if (existingSk && existingSk.name) {
+            // MATCH IS ACTIVE: Prompt the user to choose their relationship to the active session
+            const opposingSide = existingSk.side === 'home' ? 'visitor' : 'home';
+            const opposingTeamName = existingSk.side === 'home' ? selected.visit : selected.home;
+            const activeTeamName = existingSk.side === 'home' ? selected.home : selected.visit;
+
+            const choiceMsg = `⚠️ Match is active!\n\n` +
+                              `Current Scorekeeper: ${existingSk.name} (${activeTeamName})\n\n` +
+                              `Are you with the opposing team (${opposingTeamName}) entering spectator mode, or do you want to take over scorekeeping?\n\n` +
+                              `[OK] = Join as Opposing Team (Spectator Mode)\n` +
+                              `[Cancel] = Take Over Scorekeeping Control`;
+
+            if (confirm(choiceMsg)) {
+                // User chose to join as the opposing team -> Automatic Spectator Mode
+                myRole = 'spectator';
+                myScorekeeperName = '';
+                activeScorekeeperInfo = existingSk;
+                localStorage.setItem('active_match_role', 'spectator');
+                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(existingSk));
+                saveMatchState();
+                draw();
+            } else {
+                // User chose to take over scorekeeping
+                requestTakeover();
+            }
+        } else {
+            // No active scorekeeper yet - open normal role selection
+            openRoleSelectionModal(null);
+        }
+    } else {
+        closeMatchPickerModal();
+    }
+}
+
+    
     function clearSelectedMatch() {
         if (!canEditMatch() && myRole !== '') return;
         document.getElementById('h-team').value = "";
