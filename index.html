@@ -389,7 +389,7 @@
             border: 2px solid var(--gold);
             border-radius: 12px;
             padding: 20px;
-            max-width: 450px;
+            max-width: 480px;
             width: 100%;
             text-align: left;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
@@ -414,7 +414,7 @@
             background: var(--bg);
             border: 1px solid var(--slate);
             border-radius: 8px;
-            padding: 8px 10px;
+            padding: 10px 12px;
             margin-bottom: 8px;
         }
 
@@ -553,7 +553,7 @@
 
     <!-- LIVE SPECTATOR MODAL -->
     <div id="spectator-modal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-content">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate); padding-bottom: 6px; margin-bottom: 8px;">
                 <h2 style="color: var(--gold); margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
                     <span class="live-dot"></span> League Live Matches
@@ -871,7 +871,7 @@
             if (tab === 'live') {
                 stopSpectatorPolling();
                 fetchLiveMatches();
-                spectatorInterval = setInterval(fetchLiveMatches, 10000); // Set to 10
+                spectatorInterval = setInterval(fetchLiveMatches, 10000);
             } else {
                 stopSpectatorPolling();
                 fetchArchivedMatches();
@@ -887,130 +887,138 @@
         }
 
         async function fetchLiveMatches() {
-    const grid = document.getElementById('live-matches-grid');
-    if (!grid) return;
+            const grid = document.getElementById('live-matches-grid');
+            if (!grid) return;
 
-    // 1. Capture the user's current scroll position before updating DOM
-    const scrollPos = grid.scrollTop;
-    const code = localStorage.getItem('league_code') || "";
+            const scrollPos = grid.scrollTop;
+            const code = localStorage.getItem('league_code') || "";
 
-    try {
-        const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
-        const data = await res.json();
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
+                const data = await res.json();
 
-        if (data.status === 'success' && data.matches && data.matches.length > 0) {
-            grid.innerHTML = data.matches.map((m, mIdx) => {
-                const matchId = `live_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
-                const isOpen = openScorecards.has(matchId); // Preserves open match scorecards
+                if (data.status === 'success' && data.matches && data.matches.length > 0) {
+                    grid.innerHTML = data.matches.map((m, mIdx) => {
+                        const matchId = `live_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
+                        const isOpen = openScorecards.has(matchId);
 
-                const gamesHtml = (m.games || []).map((g, idx) => {
-                    let winClass = '';
-                    const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
-                    const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
-                    
-                    if (isHWin) winClass = 'win-h';
-                    if (isVWin) winClass = 'win-v';
+                        const gamesHtml = (m.games || []).map((g, idx) => {
+                            let winClass = '';
+                            const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
+                            const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
+                            
+                            if (isHWin) winClass = 'win-h';
+                            if (isVWin) winClass = 'win-v';
 
-                    let markerBadge = '';
-                    const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
-                    const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
+                            let markerBadge = '';
+                            const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
+                            const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
 
-                    if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                    else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
+                            if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
+                            else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
 
-                    return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
-                }).join('');
+                            return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
+                        }).join('');
 
-                const detailedGamesList = (m.games || []).map((g, idx) => {
-                    const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
-                    const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
-                    const winner = g.win;
+                        const detailedGamesList = (m.games || []).map((g, idx) => {
+                            const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
+                            const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
+                            const winner = g.win;
 
-                    if (!hName && !vName && !winner) return '';
+                            if (!hName && !vName && !winner) return '';
 
-                    const isHWin = winner === 'h' || g.homeWin === true;
-                    const isVWin = winner === 'v' || g.visitWin === true;
+                            const isHWin = winner === 'h' || g.homeWin === true;
+                            const isVWin = winner === 'v' || g.visitWin === true;
 
-                    const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
-                    const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
+                            const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
+                            const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
 
-                    const hTR = g.hTR || g.homeTR ? 'TR' : '';
-                    const h8B = g.h8B || g.home8BB ? '8BB' : '';
-                    const vTR = g.vTR || g.visitTR ? 'TR' : '';
-                    const v8B = g.v8B || g.visit8BB ? '8BB' : '';
+                            const hTR = g.hTR || g.homeTR ? 'TR' : '';
+                            const h8B = g.h8B || g.home8BB ? '8BB' : '';
+                            const vTR = g.vTR || g.visitTR ? 'TR' : '';
+                            const v8B = g.v8B || g.visit8BB ? '8BB' : '';
 
-                    const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
-                    const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
+                            const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
+                            const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
 
-                    const gameNumber = g.id || (idx + 1);
+                            const gameNumber = g.id || (idx + 1);
 
-                    return `
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
-                            <span style="flex: 1; text-align: left; ${hWinStyle}">
-                                ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
-                            </span>
-                            <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
-                            <span style="flex: 1; text-align: right; ${vWinStyle}">
-                                <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
-                            </span>
-                        </div>
-                    `;
-                }).join('');
+                            return `
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
+                                    <span style="flex: 1; text-align: left; ${hWinStyle}">
+                                        ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
+                                    </span>
+                                    <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
+                                    <span style="flex: 1; text-align: right; ${vWinStyle}">
+                                        <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('');
 
-                const currentRackNum = m.currentRack || 1;
-                const activeGame = (m.games || []).find(g => g.id === currentRackNum) || (m.games || [])[currentRackNum - 1];
-                const hPlayer = activeGame ? (activeGame.h || activeGame.homePlayer || 'Home') : 'Home';
-                const vPlayer = activeGame ? (activeGame.v || activeGame.visitPlayer || 'Away') : 'Away';
+                        const currentRackNum = m.currentRack || 1;
+                        const activeGame = (m.games || []).find(g => g.id === currentRackNum) || (m.games || [])[currentRackNum - 1];
+                        const hPlayer = activeGame ? (activeGame.h || activeGame.homePlayer || 'Home') : 'Home';
+                        const vPlayer = activeGame ? (activeGame.v || activeGame.visitPlayer || 'Away') : 'Away';
 
-                return `
-                    <div class="live-card">
-                        <div class="live-card-header">
-                            <span>MATCH #${mIdx + 1} — GAME ${currentRackNum} OF 18</span>
-                            <span style="color: #22c55e;">● LIVE</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.homeTeam || 'Home Team'}</span>
-                            <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.visitTeam || 'Visiting Team'}</span>
-                            <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
-                        </div>
-                        <div class="active-matchup-bar">
-                            <span class="active-player" style="color: #60a5fa;">${hPlayer}</span>
-                            <span style="color: var(--gold); font-size: 0.65rem; font-weight: bold;">GM ${currentRackNum}</span>
-                            <span class="active-player" style="color: #f87171;">${vPlayer}</span>
-                        </div>
-                        <div class="game-breakdown-bar">
-                            ${gamesHtml}
-                        </div>
-                        <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
-                            <button onclick="toggleScorecard('${matchId}'); fetchLiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
-                                📋 View Match Scorecard ${isOpen ? '▴' : '▾'}
-                            </button>
-                            <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
-                                ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded yet.</p>'}
+                        // Scorekeeper Badge display
+                        const sideLabel = m.scorekeeperSide === 'home' ? 'Home Team' : (m.scorekeeperSide === 'visitor' ? 'Visiting Team' : '');
+                        const scorekeeperBadge = m.scorekeeperName
+                            ? `<div style="font-size: 0.74rem; color: #fde68a; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; padding: 5px 8px; margin-top: 6px; text-align: center;">
+                                   ✍️ Scorekeeper: <b>${m.scorekeeperName}</b> (${sideLabel})
+                               </div>`
+                            : `<div style="font-size: 0.72rem; color: #94a3b8; margin-top: 5px; text-align: center;">
+                                   ⏳ Waiting for scorekeeper...
+                               </div>`;
+
+                        return `
+                            <div class="live-card">
+                                <div class="live-card-header">
+                                    <span>MATCH #${mIdx + 1} — GAME ${currentRackNum} OF 18</span>
+                                    <span style="color: #22c55e;">● LIVE</span>
+                                </div>
+                                <div class="live-team-row">
+                                    <span>${m.homeTeam || 'Home Team'}</span>
+                                    <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
+                                </div>
+                                <div class="live-team-row">
+                                    <span>${m.visitTeam || 'Visiting Team'}</span>
+                                    <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
+                                </div>
+                                ${scorekeeperBadge}
+                                <div class="active-matchup-bar">
+                                    <span class="active-player" style="color: #60a5fa;">${hPlayer}</span>
+                                    <span style="color: var(--gold); font-size: 0.65rem; font-weight: bold;">GM ${currentRackNum}</span>
+                                    <span class="active-player" style="color: #f87171;">${vPlayer}</span>
+                                </div>
+                                <div class="game-breakdown-bar">
+                                    ${gamesHtml}
+                                </div>
+                                <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
+                                    <button onclick="toggleScorecard('${matchId}'); fetchLiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
+                                        📋 View Match Scorecard ${isOpen ? '▴' : '▾'}
+                                    </button>
+                                    <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
+                                        ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded yet.</p>'}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        } else {
-            if (!grid.innerHTML.trim() || grid.innerHTML.includes('Loading')) {
-                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No active matches currently in progress.</p>';
+                        `;
+                    }).join('');
+                } else {
+                    if (!grid.innerHTML.trim() || grid.innerHTML.includes('Loading')) {
+                        grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No active matches currently in progress.</p>';
+                    }
+                }
+            } catch (e) {
+                // Background polling error handler
+            } finally {
+                if (grid) {
+                    grid.scrollTop = scrollPos;
+                }
             }
         }
-    } catch (e) {
-        // Silently handle background errors so it never disrupts a user's viewing experience
-    } finally {
-        // 2. Instantly restore the exact scroll position back after updating DOM
-        if (grid) {
-            grid.scrollTop = scrollPos;
-        }
-    }
-}
-
 
         async function fetchArchivedMatches() {
             const grid = document.getElementById('live-matches-grid');
@@ -1149,3 +1157,4 @@
     </script>
 </body>
 </html>
+Correct?
