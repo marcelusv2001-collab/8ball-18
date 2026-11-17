@@ -1716,16 +1716,68 @@
         const sUrl = document.getElementById('stats-url').value.trim();
         const pUrl = document.getElementById('pay-url-input').value.trim();
 
+        if (sUrl) { localStorage.setItem('user_stats_url', sUrl); updateStatsButton(sUrl); }
+        if (pUrl) { localStorage.setItem('user_pay_url', pUrl); }
+        document.getElementById('setup-panel').open = false;
+
+        // 1. CHECK CENTRAL DB FIRST BEFORE OPENING ANY MODALS
+        const leagueCode = localStorage.getItem('league_code');
+        if (leagueCode && navigator.onLine) {
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                const data = await res.json();
+                
+                if (data.status === 'success' && Array.isArray(data.matches) && data.matches.length > 0) {
+                    const activeMatch = data.matches.find(m => m.status === 'in-progress') || data.matches[0];
+                    
+                    // If an active match exists and WE are not already the active scorekeeper for it
+                    if (activeMatch && activeMatch.homeTeam && activeMatch.visitTeam) {
+                        const isMeScorekeeping = (myRole === 'home' || myRole === 'visitor') && 
+                                                 myScorekeeperName && 
+                                                 activeMatch.scorekeeperName === myScorekeeperName;
+
+                        if (!isMeScorekeeping) {
+                            // Load rosters silently in background (showPopup = false)
+                            if (rUrl) {
+                                localStorage.setItem('user_sheet_url', rUrl);
+                                fetchRosters(rUrl, false);
+                            }
+
+                            document.getElementById('h-team').value = activeMatch.homeTeam;
+                            document.getElementById('v-team').value = activeMatch.visitTeam || activeMatch.visit;
+                            
+                            if (activeMatch.games && Array.isArray(activeMatch.games)) {
+                                state = activeMatch.games;
+                            }
+
+                            // Force Spectator Mode immediately and skip all prompts
+                            myRole = 'spectator';
+                            myScorekeeperName = '';
+                            activeScorekeeperInfo = {
+                                name: activeMatch.scorekeeperName || 'Active Scorekeeper',
+                                side: activeMatch.scorekeeperSide || 'home'
+                            };
+                            localStorage.setItem('active_match_role', 'spectator');
+                            localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                            
+                            saveMatchState();
+                            draw();
+                            return; // STOP HERE — Do not open Match Picker or Role Modal
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("START active match check failed:", e);
+            }
+        }
+
+        // 2. ONLY if no active match was found, load rosters and open Match Picker
         if (rUrl) { 
             localStorage.setItem('user_sheet_url', rUrl); 
             await fetchRosters(rUrl, true); 
         }
-        if (sUrl) { localStorage.setItem('user_stats_url', sUrl); updateStatsButton(sUrl); }
-        if (pUrl) { localStorage.setItem('user_pay_url', pUrl); }
-
-        document.getElementById('setup-panel').open = false;
     }
-
+    
     function setStatus(type) {
         const led = document.getElementById('led');
         const txt = document.getElementById('status-text');
@@ -1887,83 +1939,66 @@
     }
 
     async function applyPopupMatchSelection() {
-    if (isMatchApproved()) {
-        closeMatchPickerModal();
-        return;
-    }
-    const date = document.getElementById('popup-week-selector').value;
-    const matchIdx = document.getElementById('popup-match-selector').value;
-    if (!date || matchIdx === "") {
-        alert("Please select both a date and a match.");
-        return;
-    }
-    const selected = MASTER_SCHEDULE.filter(s => s.date === date)[matchIdx];
-    if (selected) {
-        document.getElementById('h-team').value = selected.home;
-        document.getElementById('v-team').value = selected.visit;
-        document.getElementById('clear-match-btn').style.display = 'block';
-        
-        closeMatchPickerModal();
-
-        // Check if another device already has an active scorekeeper for this matchup
-        let existingSk = null;
-        const leagueCode = localStorage.getItem('league_code');
-        if (leagueCode && navigator.onLine) {
-            try {
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-                const data = await res.json();
-                if (data.status === 'success' && Array.isArray(data.matches)) {
-                    const found = data.matches.find(m => 
-                        (m.homeTeam || '').toUpperCase() === selected.home.toUpperCase() &&
-                        (m.visitTeam || '').toUpperCase() === selected.visit.toUpperCase()
-                    );
-                    
-                    if (found && found.scorekeeperName && found.scorekeeperSide) {
-                        existingSk = {
-                            name: found.scorekeeperName,
-                            side: found.scorekeeperSide
-                        };
-                    }
-                }
-            } catch (e) {
-                console.error("Could not verify active match state", e);
-            }
+        if (isMatchApproved()) {
+            closeMatchPickerModal();
+            return;
         }
+        const date = document.getElementById('popup-week-selector').value;
+        const matchIdx = document.getElementById('popup-match-selector').value;
+        if (!date || matchIdx === "") {
+            alert("Please select both a date and a match.");
+            return;
+        }
+        const selected = MASTER_SCHEDULE.filter(s => s.date === date)[matchIdx];
+        if (selected) {
+            document.getElementById('h-team').value = selected.home;
+            document.getElementById('v-team').value = selected.visit;
+            document.getElementById('clear-match-btn').style.display = 'block';
+            
+            closeMatchPickerModal();
 
-        if (existingSk && existingSk.name) {
-            // MATCH IS ACTIVE: Prompt the user to choose their relationship to the active session
-            const opposingSide = existingSk.side === 'home' ? 'visitor' : 'home';
-            const opposingTeamName = existingSk.side === 'home' ? selected.visit : selected.home;
-            const activeTeamName = existingSk.side === 'home' ? selected.home : selected.visit;
+            // Check Central DB for an active session on this specific matchup
+            let activeMatch = null;
+            const leagueCode = localStorage.getItem('league_code');
+            if (leagueCode && navigator.onLine) {
+                try {
+                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                    const data = await res.json();
+                    if (data.status === 'success' && Array.isArray(data.matches)) {
+                        activeMatch = data.matches.find(m => 
+                            (m.homeTeam || '').trim().toUpperCase() === selected.home.trim().toUpperCase() &&
+                            (m.visitTeam || m.visit || '').trim().toUpperCase() === selected.visit.trim().toUpperCase() &&
+                            (m.status === 'in-progress' || m.scorekeeperName)
+                        );
+                    }
+                } catch (e) {
+                    console.error("Could not verify active match state", e);
+                }
+            }
 
-            const choiceMsg = `⚠️ Match is active!\n\n` +
-                              `Current Scorekeeper: ${existingSk.name} (${activeTeamName})\n\n` +
-                              `Are you with the opposing team (${opposingTeamName}) entering spectator mode, or do you want to take over scorekeeping?\n\n` +
-                              `[OK] = Join as Opposing Team (Spectator Mode)\n` +
-                              `[Cancel] = Take Over Scorekeeping Control`;
-
-            if (confirm(choiceMsg)) {
-                // User chose to join as the opposing team -> Automatic Spectator Mode
+            if (activeMatch) {
+                // Match is ALREADY active -> Auto-lock into Spectator Mode immediately
+                if (activeMatch.games && Array.isArray(activeMatch.games)) {
+                    state = activeMatch.games;
+                }
                 myRole = 'spectator';
                 myScorekeeperName = '';
-                activeScorekeeperInfo = existingSk;
+                activeScorekeeperInfo = {
+                    name: activeMatch.scorekeeperName || 'Active Scorekeeper',
+                    side: activeMatch.scorekeeperSide || 'home'
+                };
                 localStorage.setItem('active_match_role', 'spectator');
-                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(existingSk));
+                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
                 saveMatchState();
                 draw();
             } else {
-                // User chose to take over scorekeeping
-                requestTakeover();
+                // Brand new match with no active scorekeeper -> Ask who is scorekeeping
+                openRoleSelectionModal(null);
             }
         } else {
-            // No active scorekeeper yet - open normal role selection
-            openRoleSelectionModal(null);
+            closeMatchPickerModal();
         }
-    } else {
-        closeMatchPickerModal();
     }
-}
-
     
     function clearSelectedMatch() {
         if (!canEditMatch() && myRole !== '') return;
