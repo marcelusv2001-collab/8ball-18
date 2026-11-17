@@ -859,7 +859,11 @@
         if (banner) banner.remove();
     }
 
-    async function openRoleSelectionModal(existingScorekeeper = null) {
+    function canEditMatch() {
+        return !isApproved && myRole !== 'spectator' && myRole !== '';
+    }
+
+    async function openRoleSelectionModal(existingScorekeeper = null, isTakeoverFlow = false) {
         const hTeam = (document.getElementById('h-team').value || "Home Team").trim();
         const vTeam = (document.getElementById('v-team').value || "Visiting Team").trim();
 
@@ -868,54 +872,54 @@
             return;
         }
 
-        // 1. Ask the explicit question: Are you keeping score?
-        const isKeepingScore = confirm(
-            `Are you keeping score for this match?\n\n` +
-            `• Click [OK] if YOU are the active scorekeeper.\n` +
-            `• Click [Cancel] to join as a Spectator.`
-        );
+        if (!isTakeoverFlow) {
+            const isKeepingScore = confirm(
+                `Are you keeping score for this match?\n\n` +
+                `• Click [OK] if YOU are the active scorekeeper.\n` +
+                `• Click [Cancel] to join as a Spectator.`
+            );
 
-        if (!isKeepingScore) {
-            // User said NO -> Enter Spectator Mode immediately
-            myRole = 'spectator';
-            myScorekeeperName = '';
-            
-            // Try to check if someone else is already keeping score
-            let activeSk = existingScorekeeper;
-            const leagueCode = localStorage.getItem('league_code');
-            if (leagueCode && navigator.onLine) {
-                try {
-                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-                    const data = await res.json();
-                    if (data.status === 'success' && Array.isArray(data.matches)) {
-                        const found = data.matches.find(m => 
-                            (m.homeTeam || '').trim().toUpperCase() === hTeam.toUpperCase() &&
-                            (m.visitTeam || m.visit || '').trim().toUpperCase() === vTeam.toUpperCase()
-                        );
-                        if (found && found.scorekeeperName) {
-                            activeSk = { name: found.scorekeeperName, side: found.scorekeeperSide };
-                            if (found.games && Array.isArray(found.games)) state = found.games;
+            if (!isKeepingScore) {
+                myRole = 'spectator';
+                myScorekeeperName = '';
+                
+                let activeSk = existingScorekeeper;
+                const leagueCode = localStorage.getItem('league_code');
+                if (leagueCode && navigator.onLine) {
+                    try {
+                        const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                        const data = await res.json();
+                        if (data.status === 'success' && Array.isArray(data.matches)) {
+                            const found = data.matches.find(m => 
+                                (m.homeTeam || '').trim().toUpperCase() === hTeam.toUpperCase() &&
+                                (m.visitTeam || m.visit || '').trim().toUpperCase() === vTeam.toUpperCase()
+                            );
+                            if (found && found.scorekeeperName) {
+                                activeSk = { name: found.scorekeeperName, side: found.scorekeeperSide };
+                                if (found.games && Array.isArray(found.games)) state = found.games;
+                            }
                         }
-                    }
-                } catch (e) {}
-            }
+                    } catch (e) {}
+                }
 
-            activeScorekeeperInfo = activeSk || { name: 'Active Scorekeeper', side: 'home' };
-            localStorage.setItem('active_match_role', 'spectator');
-            localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
-            saveMatchState();
-            draw();
-            return;
+                activeScorekeeperInfo = activeSk || { name: 'Active Scorekeeper', side: 'home' };
+                localStorage.setItem('active_match_role', 'spectator');
+                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                saveMatchState();
+                draw();
+                return;
+            }
         }
 
-        // 2. User said YES -> Proceed to standard role selection & roster picking modal
+        window.isPendingTakeover = isTakeoverFlow;
+
         document.getElementById('prompt-home-name').innerText = hTeam;
         document.getElementById('prompt-visit-name').innerText = vTeam;
 
         const warningBox = document.getElementById('active-sk-warning');
         if (existingScorekeeper && existingScorekeeper.name) {
             const sideLabel = existingScorekeeper.side === 'home' ? 'Home Team' : 'Visiting Team';
-            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is currently keeping score. Claiming scorekeeper role will transition them to spectator mode.`;
+            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is currently keeping score. Claiming scorekeeper role will initiate a takeover request.`;
             warningBox.style.display = 'block';
         } else {
             warningBox.style.display = 'none';
@@ -924,8 +928,6 @@
         backToRoleStep1();
         document.getElementById('role-select-modal').style.display = 'flex';
     }
-
-
 
     function selectScorekeeperSide(side) {
         pendingRoleSide = side;
@@ -980,7 +982,14 @@
             return;
         }
 
-        confirmMatchRole(pendingRoleSide, chosenName);
+        if (window.isPendingTakeover) {
+            window.isPendingTakeover = false;
+            myScorekeeperName = chosenName;
+            document.getElementById('role-select-modal').style.display = 'none';
+            sendTakeoverRequestToCloud(pendingRoleSide, chosenName);
+        } else {
+            confirmMatchRole(pendingRoleSide, chosenName);
+        }
     }
 
     function confirmMatchRole(role, playerName) {
@@ -1007,22 +1016,7 @@
             alert("You must be online to request scorekeeper takeover.");
             return;
         }
-
-        const hTeam = document.getElementById('h-team').value || "Home Team";
-        const vTeam = document.getElementById('v-team').value || "Visiting Team";
-
-        // Prompt user whether they are taking over as Home or Visiting team
-        const sideChoice = confirm(`Click OK for Home Team (${hTeam}) scorekeeper control, or Cancel for Visiting Team (${vTeam}) control.`) ? 'home' : 'visitor';
-        
-        // Prompt for player name
-        let pName = prompt("Enter your name for scorekeeping takeover:", myScorekeeperName || "");
-        if (!pName) return;
-
-        myScorekeeperName = pName;
-        pendingRoleSide = sideChoice;
-
-        // Broadcast takeover request
-        sendTakeoverRequestToCloud(sideChoice, pName);
+        openRoleSelectionModal(activeScorekeeperInfo, true);
     }
 
     async function sendTakeoverRequestToCloud(side, name) {
@@ -1055,7 +1049,7 @@
         }
     }
 
-        async function pollRemoteMatchStatus() {
+    async function pollRemoteMatchStatus() {
         const leagueCode = localStorage.getItem('league_code');
         if (!leagueCode || !navigator.onLine) return;
 
@@ -1073,7 +1067,6 @@
                 );
 
                 if (found) {
-                    // 1. Check if someone is requesting takeover from US
                     if (myRole !== 'spectator' && myRole !== '' && found.takeoverRequester && found.takeoverRequester !== myScorekeeperName) {
                         if (activeTakeoverRequester !== found.takeoverRequester) {
                             activeTakeoverRequester = found.takeoverRequester;
@@ -1081,7 +1074,6 @@
                         }
                     }
 
-                    // 2. If we are spectator, seamlessly update scores & game grid without stealing scroll focus
                     if (myRole === 'spectator') {
                         if (found.scorekeeperName && (!activeScorekeeperInfo || activeScorekeeperInfo.name !== found.scorekeeperName)) {
                             activeScorekeeperInfo = {
@@ -1092,13 +1084,11 @@
                         }
 
                         if (found.games && Array.isArray(found.games)) {
-                            // Check if remote games differ from local state before redrawing
                             const remoteString = JSON.stringify(found.games);
                             const localString = JSON.stringify(state);
                             if (remoteString !== localString) {
                                 state = found.games;
                                 
-                                // Preserve scroll position during seamless spectator refresh
                                 const scoringInterface = document.getElementById('scoring-interface');
                                 const currentScrollTop = scoringInterface ? scoringInterface.scrollTop : 0;
                                 
@@ -1108,13 +1098,11 @@
                                     scoringInterface.scrollTop = currentScrollTop;
                                 }
                             } else {
-                                // Just update role banner text if needed without touching scroll
                                 renderRoleStatusBar();
                             }
                         }
                     }
 
-                    // 3. If we requested takeover and our request was granted:
                     if (myRole === 'spectator' && found.scorekeeperName === myScorekeeperName) {
                         myRole = found.scorekeeperSide;
                         localStorage.setItem('active_match_role', myRole);
@@ -1125,7 +1113,6 @@
             }
         } catch (e) {}
     }
-
 
     function showTakeoverAlertModal(requesterName, side) {
         document.getElementById('takeover-alert-text').innerText = 
@@ -1141,7 +1128,6 @@
             document.getElementById('takeover-countdown-display').innerText = takeoverCountdown + 's';
             if (takeoverCountdown <= 0) {
                 clearInterval(takeoverTimer);
-                // 20 seconds expired without response -> Automatic release!
                 releaseTakeoverControlDueToTimeout();
             }
         }, 1000);
@@ -1154,7 +1140,6 @@
 
     function denyTakeoverRequest() {
         hideTakeoverAlertModal();
-        // Clear requester on backend so they know we denied
         sendTakeoverResolutionToCloud(false);
     }
 
@@ -1251,7 +1236,6 @@
         const hTeam = document.getElementById('h-team').value;
         const vTeam = document.getElementById('v-team').value;
         
-        // Offline-first save to localStorage
         localStorage.setItem('active_match_state', JSON.stringify({
             hTeam: hTeam,
             vTeam: vTeam,
@@ -1267,7 +1251,6 @@
             return;
         }
 
-        // Only push remote live updates if this device is the active scorekeeper
         if (canEditMatch()) {
             syncLiveMatchStateInBackground();
         }
@@ -1787,7 +1770,6 @@
         if (pUrl) { localStorage.setItem('user_pay_url', pUrl); }
         document.getElementById('setup-panel').open = false;
 
-        // 1. CHECK CENTRAL DB FIRST BEFORE OPENING ANY MODALS
         const leagueCode = localStorage.getItem('league_code');
         if (leagueCode && navigator.onLine) {
             try {
@@ -1797,14 +1779,12 @@
                 if (data.status === 'success' && Array.isArray(data.matches) && data.matches.length > 0) {
                     const activeMatch = data.matches.find(m => m.status === 'in-progress') || data.matches[0];
                     
-                    // If an active match exists and WE are not already the active scorekeeper for it
                     if (activeMatch && activeMatch.homeTeam && activeMatch.visitTeam) {
                         const isMeScorekeeping = (myRole === 'home' || myRole === 'visitor') && 
                                                  myScorekeeperName && 
                                                  activeMatch.scorekeeperName === myScorekeeperName;
 
                         if (!isMeScorekeeping) {
-                            // Load rosters silently in background (showPopup = false)
                             if (rUrl) {
                                 localStorage.setItem('user_sheet_url', rUrl);
                                 fetchRosters(rUrl, false);
@@ -1817,7 +1797,6 @@
                                 state = activeMatch.games;
                             }
 
-                            // Force Spectator Mode immediately and skip all prompts
                             myRole = 'spectator';
                             myScorekeeperName = '';
                             activeScorekeeperInfo = {
@@ -1829,7 +1808,7 @@
                             
                             saveMatchState();
                             draw();
-                            return; // STOP HERE — Do not open Match Picker or Role Modal
+                            return;
                         }
                     }
                 }
@@ -1838,7 +1817,6 @@
             }
         }
 
-        // 2. ONLY if no active match was found, load rosters and open Match Picker
         if (rUrl) { 
             localStorage.setItem('user_sheet_url', rUrl); 
             await fetchRosters(rUrl, true); 
@@ -1868,7 +1846,6 @@
             localStorage.setItem('cached_rosters_csv', data);
             parseCSV(data, showPopup);
         } catch (err) {
-            // Offline fallback: use cached CSV if available
             const cachedCsv = localStorage.getItem('cached_rosters_csv');
             if (cachedCsv) {
                 parseCSV(cachedCsv, showPopup);
@@ -2005,7 +1982,7 @@
         });
     }
 
-        async function applyPopupMatchSelection() {
+    async function applyPopupMatchSelection() {
         if (isMatchApproved()) {
             closeMatchPickerModal();
             return;
@@ -2024,13 +2001,11 @@
             
             closeMatchPickerModal();
 
-            // Open the role selection modal which now features the live pre-flight check
             openRoleSelectionModal(null);
         } else {
             closeMatchPickerModal();
         }
     }
-
     
     function clearSelectedMatch() {
         if (!canEditMatch() && myRole !== '') return;
@@ -2112,137 +2087,6 @@
         draw(); 
     }
 
-    function requestTakeover() {
-        if (!navigator.onLine) {
-            alert("You must be online to request scorekeeper takeover.");
-            return;
-        }
-
-        const hTeam = (document.getElementById('h-team').value || "Home Team").toUpperCase();
-        const vTeam = (document.getElementById('v-team').value || "Visiting Team").toUpperCase();
-
-        const sideChoice = confirm(`Click OK for Home Team (${hTeam}) control, or Cancel for Visiting Team (${vTeam}) control.`) ? 'home' : 'visitor';
-        const targetTeamName = sideChoice === 'home' ? hTeam : vTeam;
-
-        const roster = MASTER_ROSTERS[targetTeamName] || [];
-        let pName = "";
-
-        if (roster.length > 0) {
-            let rosterOptions = roster.join('\n');
-            pName = prompt(`Select your name from the ${targetTeamName} roster for takeover:\n\n${rosterOptions}\n\n(Type your exact name below):`, "");
-        } else {
-            pName = prompt(`Enter your name for scorekeeping takeover (${targetTeamName}):`, myScorekeeperName || "");
-        }
-
-        if (!pName || !pName.trim()) return;
-        pName = pName.trim();
-
-        myScorekeeperName = pName;
-        pendingRoleSide = sideChoice;
-
-        sendTakeoverRequestToCloud(sideChoice, pName);
-    }
-
-    async function applyPopupMatchSelection() {
-        if (isMatchApproved()) {
-            closeMatchPickerModal();
-            return;
-        }
-        const date = document.getElementById('popup-week-selector').value;
-        const matchIdx = document.getElementById('popup-match-selector').value;
-        if (!date || matchIdx === "") {
-            alert("Please select both a date and a match.");
-            return;
-        }
-        const selected = MASTER_SCHEDULE.filter(s => s.date === date)[matchIdx];
-        if (selected) {
-            document.getElementById('h-team').value = selected.home;
-            document.getElementById('v-team').value = selected.visit;
-            document.getElementById('clear-match-btn').style.display = 'block';
-            
-            closeMatchPickerModal();
-
-            let existingSk = null;
-            const leagueCode = localStorage.getItem('league_code');
-            if (leagueCode && navigator.onLine) {
-                try {
-                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-                    const data = await res.json();
-                    if (data.status === 'success' && Array.isArray(data.matches)) {
-                        const found = data.matches.find(m => 
-                            (m.homeTeam || '').toUpperCase() === selected.home.toUpperCase() &&
-                            (m.visitTeam || '').toUpperCase() === selected.visit.toUpperCase()
-                        );
-                        
-                        if (found && found.scorekeeperName && found.scorekeeperSide) {
-                            existingSk = {
-                                name: found.scorekeeperName,
-                                side: found.scorekeeperSide
-                            };
-                        }
-                    }
-                } catch (e) {
-                    console.error("Could not verify active match state", e);
-                }
-            }
-
-            if (existingSk && existingSk.name) {
-                myRole = 'spectator';
-                myScorekeeperName = '';
-                activeScorekeeperInfo = existingSk;
-                localStorage.setItem('active_match_role', 'spectator');
-                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(existingSk));
-                saveMatchState();
-                draw();
-            } else {
-                openRoleSelectionModal(null);
-            }
-        } else {
-            closeMatchPickerModal();
-        }
-    }
-
-    async function saveSettings() {
-        const rUrl = document.getElementById('sheet-url').value.trim();
-        const sUrl = document.getElementById('stats-url').value.trim();
-        const pUrl = document.getElementById('pay-url-input').value.trim();
-
-        if (rUrl) { 
-            localStorage.setItem('user_sheet_url', rUrl); 
-            await fetchRosters(rUrl, true); 
-        }
-        if (sUrl) { localStorage.setItem('user_stats_url', sUrl); updateStatsButton(sUrl); }
-        if (pUrl) { localStorage.setItem('user_pay_url', pUrl); }
-
-        document.getElementById('setup-panel').open = false;
-        
-        const leagueCode = localStorage.getItem('league_code');
-        const hT = document.getElementById('h-team').value;
-        const vT = document.getElementById('v-team').value;
-
-        if (leagueCode && hT && vT && navigator.onLine) {
-            try {
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-                const data = await res.json();
-                if (data.status === 'success' && Array.isArray(data.matches)) {
-                    const found = data.matches.find(m => 
-                        (m.homeTeam || '').toUpperCase() === hT.toUpperCase() &&
-                        (m.visitTeam || '').toUpperCase() === vT.toUpperCase()
-                    );
-                    if (found && found.scorekeeperName) {
-                        myRole = 'spectator';
-                        localStorage.setItem('active_match_role', 'spectator');
-                        activeScorekeeperInfo = { name: found.scorekeeperName, side: found.scorekeeperSide };
-                        localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
-                        draw();
-                        return;
-                    }
-                }
-            } catch (e) {}
-        }
-    }
-
-    
     function closeAllDropdowns() { document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none'); }
 
     function draw() {
