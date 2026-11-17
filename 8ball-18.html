@@ -1185,7 +1185,7 @@
         } catch (e) {}
     }
 
-    function renderRoleStatusBar() {
+        function renderRoleStatusBar() {
         const bar = document.getElementById('role-status-bar');
         if (!bar) return;
 
@@ -1196,14 +1196,15 @@
             return;
         }
 
+        // Offline or online local display banner
         if (myRole === 'spectator' || !myRole) {
             const skText = activeScorekeeperInfo && activeScorekeeperInfo.name
                 ? `Active Scorekeeper: ${activeScorekeeperInfo.name} (${activeScorekeeperInfo.side === 'home' ? 'Home' : 'Away'})`
-                : 'No active scorekeeper yet (Claim role below or watch live)';
+                : 'Local Spectator Mode (Viewing)';
             bar.innerHTML = `
                 <div class="spectator-banner">
-                    <span>👀 Spectator Mode: ${skText}</span>
-                    <button type="button" class="btn-takeover" onclick="requestTakeover()">Take Over</button>
+                    <span>👀 ${skText}</span>
+                    <button type="button" class="btn-takeover" onclick="localTakeoverOverride()">Take Over</button>
                 </div>
             `;
         } else {
@@ -1211,12 +1212,35 @@
             const skLabel = myScorekeeperName ? `${myScorekeeperName} (${sideText})` : sideText;
             bar.innerHTML = `
                 <div class="spectator-banner" style="border-color: #22c55e; color: #86efac;">
-                    <span>✍️ Active Scorekeeper: ${skLabel} (Opponent in Spectator Mode)</span>
+                    <span>✍️ Active Scorekeeper: ${skLabel}</span>
                     <button type="button" class="btn-takeover" style="background: #334155; color: #f8fafc;" onclick="openRoleSelectionModal(activeScorekeeperInfo)">Switch Role</button>
                 </div>
             `;
         }
     }
+
+    // Local instant takeover override for offline/display use
+    function localTakeoverOverride() {
+        const pName = prompt("Enter your name to take over local scorekeeping display:", myScorekeeperName || "");
+        if (!pName) return;
+
+        const sideChoice = confirm("Click OK for Home Team control, or Cancel for Visiting Team control.") ? 'home' : 'visitor';
+        
+        myRole = sideChoice;
+        myScorekeeperName = pName.trim();
+        localStorage.setItem('active_match_role', myRole);
+        localStorage.setItem('active_scorekeeper_name', myScorekeeperName);
+
+        activeScorekeeperInfo = {
+            name: myScorekeeperName,
+            side: myRole
+        };
+        localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+
+        saveMatchState();
+        draw();
+    }
+
 
     function handleSetupToggle(event) {
         const panel = document.getElementById('setup-panel');
