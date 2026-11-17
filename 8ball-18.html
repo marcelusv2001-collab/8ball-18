@@ -859,69 +859,56 @@
         if (banner) banner.remove();
     }
 
-    // --- ROLE & AUTO-SPECTATOR / TAKEOVER LOGIC ---
-    function canEditMatch() {
-        return !isApproved && myRole !== 'spectator' && myRole !== '';
-    }
-
-        async function openRoleSelectionModal(existingScorekeeper = null) {
+    async function openRoleSelectionModal(existingScorekeeper = null) {
         const hTeam = (document.getElementById('h-team').value || "Home Team").trim();
         const vTeam = (document.getElementById('v-team').value || "Visiting Team").trim();
 
-        // Perform a fresh pre-flight check against Central DB
-        let liveMatchData = null;
-        const leagueCode = localStorage.getItem('league_code');
-        if (leagueCode && hTeam && vTeam && navigator.onLine) {
-            try {
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-                const data = await res.json();
-                if (data.status === 'success' && Array.isArray(data.matches)) {
-                    liveMatchData = data.matches.find(m => 
-                        (m.homeTeam || '').trim().toUpperCase() === hTeam.toUpperCase() &&
-                        (m.visitTeam || m.visit || '').trim().toUpperCase() === vTeam.toUpperCase() &&
-                        (m.status === 'in-progress' || m.scorekeeperName)
-                    );
-                }
-            } catch (e) {
-                console.error("Pre-flight live check failed:", e);
-            }
+        if (!hTeam || !vTeam) {
+            alert("Please select or enter both teams first.");
+            return;
         }
 
-        if (liveMatchData && liveMatchData.scorekeeperName) {
-            // A live game is ALREADY active! Ask the user what they want to do: Spectate or Take Over
-            const activeTeamName = liveMatchData.scorekeeperSide === 'home' ? hTeam : vTeam;
-            const choice = confirm(
-                `⚠️ Live Match in Progress!\n\n` +
-                `Active Scorekeeper: ${liveMatchData.scorekeeperName} (${activeTeamName})\n\n` +
-                `Would you like to take over scorekeeping control?\n` +
-                `• Click [OK] to REQUEST TAKEOVER.\n` +
-                `• Click [Cancel] to join as a SPECTATOR.`
-            );
+        // 1. Ask the explicit question: Are you keeping score?
+        const isKeepingScore = confirm(
+            `Are you keeping score for this match?\n\n` +
+            `• Click [OK] if YOU are the active scorekeeper.\n` +
+            `• Click [Cancel] to join as a Spectator.`
+        );
 
-            if (choice) {
-                // User wants to take over
-                requestTakeover();
-                return; // Stop opening the regular role modal
-            } else {
-                // User chose spectator mode
-                myRole = 'spectator';
-                myScorekeeperName = '';
-                activeScorekeeperInfo = {
-                    name: liveMatchData.scorekeeperName,
-                    side: liveMatchData.scorekeeperSide || 'home'
-                };
-                localStorage.setItem('active_match_role', 'spectator');
-                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
-                if (liveMatchData.games && Array.isArray(liveMatchData.games)) {
-                    state = liveMatchData.games;
-                }
-                saveMatchState();
-                draw();
-                return; // Stop opening the regular role modal
+        if (!isKeepingScore) {
+            // User said NO -> Enter Spectator Mode immediately
+            myRole = 'spectator';
+            myScorekeeperName = '';
+            
+            // Try to check if someone else is already keeping score
+            let activeSk = existingScorekeeper;
+            const leagueCode = localStorage.getItem('league_code');
+            if (leagueCode && navigator.onLine) {
+                try {
+                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                    const data = await res.json();
+                    if (data.status === 'success' && Array.isArray(data.matches)) {
+                        const found = data.matches.find(m => 
+                            (m.homeTeam || '').trim().toUpperCase() === hTeam.toUpperCase() &&
+                            (m.visitTeam || m.visit || '').trim().toUpperCase() === vTeam.toUpperCase()
+                        );
+                        if (found && found.scorekeeperName) {
+                            activeSk = { name: found.scorekeeperName, side: found.scorekeeperSide };
+                            if (found.games && Array.isArray(found.games)) state = found.games;
+                        }
+                    }
+                } catch (e) {}
             }
+
+            activeScorekeeperInfo = activeSk || { name: 'Active Scorekeeper', side: 'home' };
+            localStorage.setItem('active_match_role', 'spectator');
+            localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+            saveMatchState();
+            draw();
+            return;
         }
 
-        // Proceed normally if no live session exists
+        // 2. User said YES -> Proceed to standard role selection & roster picking modal
         document.getElementById('prompt-home-name').innerText = hTeam;
         document.getElementById('prompt-visit-name').innerText = vTeam;
 
@@ -937,6 +924,7 @@
         backToRoleStep1();
         document.getElementById('role-select-modal').style.display = 'flex';
     }
+
 
 
     function selectScorekeeperSide(side) {
