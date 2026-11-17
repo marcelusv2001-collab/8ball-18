@@ -734,12 +734,45 @@
 
     let canvas, ctx, drawing = false;
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
         updateActiveLeagueDisplay();
         
         const savedCode = localStorage.getItem('league_code');
         if (savedCode) { 
             checkForUpdates(savedCode); 
+            
+            // 🚀 AUTO-CHECK CENTRAL DB FOR ACTIVE MATCH ON STARTUP
+            if (navigator.onLine) {
+                try {
+                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(savedCode)}`);
+                    const data = await res.json();
+                    if (data.status === 'success' && Array.isArray(data.matches) && data.matches.length > 0) {
+                        const activeMatch = data.matches.find(m => m.status === 'in-progress') || data.matches[0];
+                        if (activeMatch && activeMatch.homeTeam && activeMatch.visitTeam) {
+                            document.getElementById('h-team').value = activeMatch.homeTeam;
+                            document.getElementById('v-team').value = activeMatch.visitTeam || activeMatch.visit;
+                            
+                            if (activeMatch.games && Array.isArray(activeMatch.games)) {
+                                state = activeMatch.games;
+                            }
+
+                            if (!myRole) {
+                                myRole = 'spectator';
+                                localStorage.setItem('active_match_role', 'spectator');
+                                if (activeMatch.scorekeeperName) {
+                                    activeScorekeeperInfo = {
+                                        name: activeMatch.scorekeeperName,
+                                        side: activeMatch.scorekeeperSide || 'home'
+                                    };
+                                    localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Startup active match check failed", e);
+                }
+            }
         }
 
         const savedPayUrl = localStorage.getItem('user_pay_url');
@@ -787,6 +820,7 @@
         // Start background poller to check remote active scorekeeper & takeover sync
         setInterval(pollRemoteMatchStatus, 4000);
     });
+
 
     // --- OFFLINE / ONLINE LISTENERS ---
     window.addEventListener('online', () => {
