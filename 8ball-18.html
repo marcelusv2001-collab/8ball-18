@@ -733,10 +733,13 @@
     }));
 
     let canvas, ctx, drawing = false;
-window.addEventListener('DOMContentLoaded', async () => {
+
+    window.addEventListener('DOMContentLoaded', async () => {
         updateActiveLeagueDisplay();
         
         const savedCode = localStorage.getItem('league_code');
+        let activeMatchFound = false;
+
         if (savedCode) { 
             checkForUpdates(savedCode); 
             
@@ -748,6 +751,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (data.status === 'success' && Array.isArray(data.matches) && data.matches.length > 0) {
                         const activeMatch = data.matches.find(m => m.status === 'in-progress') || data.matches[0];
                         if (activeMatch && activeMatch.homeTeam && activeMatch.visitTeam) {
+                            activeMatchFound = true;
+
                             document.getElementById('h-team').value = activeMatch.homeTeam;
                             document.getElementById('v-team').value = activeMatch.visitTeam || activeMatch.visit;
                             
@@ -755,16 +760,16 @@ window.addEventListener('DOMContentLoaded', async () => {
                                 state = activeMatch.games;
                             }
 
-                            if (!myRole) {
-                                myRole = 'spectator';
-                                localStorage.setItem('active_match_role', 'spectator');
-                                if (activeMatch.scorekeeperName) {
-                                    activeScorekeeperInfo = {
-                                        name: activeMatch.scorekeeperName,
-                                        side: activeMatch.scorekeeperSide || 'home'
-                                    };
-                                    localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
-                                }
+                            // FORCE SPECTATOR MODE ON STARTUP IF MATCH IS ACTIVE
+                            myRole = 'spectator';
+                            localStorage.setItem('active_match_role', 'spectator');
+
+                            if (activeMatch.scorekeeperName) {
+                                activeScorekeeperInfo = {
+                                    name: activeMatch.scorekeeperName,
+                                    side: activeMatch.scorekeeperSide || 'home'
+                                };
+                                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
                             }
                         }
                     }
@@ -772,6 +777,11 @@ window.addEventListener('DOMContentLoaded', async () => {
                     console.error("Startup active match check failed", e);
                 }
             }
+        }
+
+        // ONLY load local match state if NO active central database match was found
+        if (!activeMatchFound) {
+            loadMatchState();
         }
 
         const savedPayUrl = localStorage.getItem('user_pay_url');
@@ -811,7 +821,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             showOfflineBanner("🔌 Offline Mode: Working locally without Wi-Fi.");
         }
 
-        loadMatchState();
         draw();
         initSignaturePad();
         calculateMatchOwed();
