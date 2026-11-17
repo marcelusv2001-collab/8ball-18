@@ -2045,6 +2045,137 @@
         draw(); 
     }
 
+    function requestTakeover() {
+        if (!navigator.onLine) {
+            alert("You must be online to request scorekeeper takeover.");
+            return;
+        }
+
+        const hTeam = (document.getElementById('h-team').value || "Home Team").toUpperCase();
+        const vTeam = (document.getElementById('v-team').value || "Visiting Team").toUpperCase();
+
+        const sideChoice = confirm(`Click OK for Home Team (${hTeam}) control, or Cancel for Visiting Team (${vTeam}) control.`) ? 'home' : 'visitor';
+        const targetTeamName = sideChoice === 'home' ? hTeam : vTeam;
+
+        const roster = MASTER_ROSTERS[targetTeamName] || [];
+        let pName = "";
+
+        if (roster.length > 0) {
+            let rosterOptions = roster.join('\n');
+            pName = prompt(`Select your name from the ${targetTeamName} roster for takeover:\n\n${rosterOptions}\n\n(Type your exact name below):`, "");
+        } else {
+            pName = prompt(`Enter your name for scorekeeping takeover (${targetTeamName}):`, myScorekeeperName || "");
+        }
+
+        if (!pName || !pName.trim()) return;
+        pName = pName.trim();
+
+        myScorekeeperName = pName;
+        pendingRoleSide = sideChoice;
+
+        sendTakeoverRequestToCloud(sideChoice, pName);
+    }
+
+    async function applyPopupMatchSelection() {
+        if (isMatchApproved()) {
+            closeMatchPickerModal();
+            return;
+        }
+        const date = document.getElementById('popup-week-selector').value;
+        const matchIdx = document.getElementById('popup-match-selector').value;
+        if (!date || matchIdx === "") {
+            alert("Please select both a date and a match.");
+            return;
+        }
+        const selected = MASTER_SCHEDULE.filter(s => s.date === date)[matchIdx];
+        if (selected) {
+            document.getElementById('h-team').value = selected.home;
+            document.getElementById('v-team').value = selected.visit;
+            document.getElementById('clear-match-btn').style.display = 'block';
+            
+            closeMatchPickerModal();
+
+            let existingSk = null;
+            const leagueCode = localStorage.getItem('league_code');
+            if (leagueCode && navigator.onLine) {
+                try {
+                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                    const data = await res.json();
+                    if (data.status === 'success' && Array.isArray(data.matches)) {
+                        const found = data.matches.find(m => 
+                            (m.homeTeam || '').toUpperCase() === selected.home.toUpperCase() &&
+                            (m.visitTeam || '').toUpperCase() === selected.visit.toUpperCase()
+                        );
+                        
+                        if (found && found.scorekeeperName && found.scorekeeperSide) {
+                            existingSk = {
+                                name: found.scorekeeperName,
+                                side: found.scorekeeperSide
+                            };
+                        }
+                    }
+                } catch (e) {
+                    console.error("Could not verify active match state", e);
+                }
+            }
+
+            if (existingSk && existingSk.name) {
+                myRole = 'spectator';
+                myScorekeeperName = '';
+                activeScorekeeperInfo = existingSk;
+                localStorage.setItem('active_match_role', 'spectator');
+                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(existingSk));
+                saveMatchState();
+                draw();
+            } else {
+                openRoleSelectionModal(null);
+            }
+        } else {
+            closeMatchPickerModal();
+        }
+    }
+
+    async function saveSettings() {
+        const rUrl = document.getElementById('sheet-url').value.trim();
+        const sUrl = document.getElementById('stats-url').value.trim();
+        const pUrl = document.getElementById('pay-url-input').value.trim();
+
+        if (rUrl) { 
+            localStorage.setItem('user_sheet_url', rUrl); 
+            await fetchRosters(rUrl, true); 
+        }
+        if (sUrl) { localStorage.setItem('user_stats_url', sUrl); updateStatsButton(sUrl); }
+        if (pUrl) { localStorage.setItem('user_pay_url', pUrl); }
+
+        document.getElementById('setup-panel').open = false;
+        
+        const leagueCode = localStorage.getItem('league_code');
+        const hT = document.getElementById('h-team').value;
+        const vT = document.getElementById('v-team').value;
+
+        if (leagueCode && hT && vT && navigator.onLine) {
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                const data = await res.json();
+                if (data.status === 'success' && Array.isArray(data.matches)) {
+                    const found = data.matches.find(m => 
+                        (m.homeTeam || '').toUpperCase() === hT.toUpperCase() &&
+                        (m.visitTeam || '').toUpperCase() === vT.toUpperCase()
+                    );
+                    if (found && found.scorekeeperName) {
+                        myRole = 'spectator';
+                        localStorage.setItem('active_match_role', 'spectator');
+                        activeScorekeeperInfo = { name: found.scorekeeperName, side: found.scorekeeperSide };
+                        localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                        draw();
+                        return;
+                    }
+                }
+            } catch (e) {}
+        }
+    }
+
+    
     function closeAllDropdowns() { document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none'); }
 
     function draw() {
