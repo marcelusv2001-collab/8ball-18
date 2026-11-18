@@ -1021,8 +1021,7 @@ async function fetchLiveMatches() {
         }
     }
 }
-
-                 async function fetchArchivedMatches() {
+        async function fetchArchivedMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
 
@@ -1038,37 +1037,33 @@ async function fetchLiveMatches() {
                 const data = await res.json();
 
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
-                    // Check if backend returns flat rows that need grouping into 18-game matches
-                    let processedMatches = data.matches;
+                    // Reverse-engineer the batch package: group every 18 rows into 1 complete match object
+                    const rawRows = data.matches;
+                    const groupedMatches = [];
+                    
+                    for (let i = 0; i < rawRows.length; i += 18) {
+                        const chunk = rawRows.slice(i, i + 18);
+                        if (chunk.length === 0) continue;
 
-                    // If your backend returns individual game rows instead of grouped matches, group them by Match/Date/Teams:
-                    if (data.matches[0] && (data.matches[0].GameNumber !== undefined || data.matches[0].gameNumber !== undefined || !Array.isArray(data.matches[0].games))) {
-                        const grouped = {};
-                        data.matches.forEach(row => {
-                            const date = (row.date || row.Timestamp || row.timestamp || 'Recent').split('T')[0];
-                            const homeTeam = row.homeTeam || row.HomeTeam || row['Home Team'] || 'Home Team';
-                            const visitTeam = row.visitTeam || row.VisitTeam || row['Visit Team'] || 'Visiting Team';
-                            const key = `${date}_${homeTeam}_${visitTeam}`;
+                        // Pull match-level details from the first row of the chunk
+                        const firstRow = chunk[0];
+                        const matchDate = (firstRow.date || firstRow.Timestamp || firstRow.timestamp || 'Recent').split('T')[0];
+                        const homeTeamName = firstRow.homeTeam || firstRow.HomeTeam || firstRow['Home Team'] || 'Home Team';
+                        const visitTeamName = firstRow.visitTeam || firstRow.VisitTeam || firstRow['Visit Team'] || 'Visiting Team';
 
-                            if (!grouped[key]) {
-                                grouped[key] = {
-                                    date: date,
-                                    homeTeam: homeTeam,
-                                    visitTeam: visitTeam,
-                                    homeScore: 0,
-                                    visitScore: 0,
-                                    games: []
-                                };
-                            }
+                        let homeMatchScore = 0;
+                        let visitMatchScore = 0;
 
+                        // Map each row back into a game frame
+                        const games = chunk.map((row, idx) => {
                             const isHWin = row.homeWin === true || row.HomeWin === true || row.win === 'h' || row.Win === 'h';
                             const isVWin = row.visitWin === true || row.VisitWin === true || row.win === 'v' || row.Win === 'v';
 
-                            if (isHWin) grouped[key].homeScore++;
-                            if (isVWin) grouped[key].visitScore++;
+                            if (isHWin) homeMatchScore++;
+                            if (isVWin) visitMatchScore++;
 
-                            grouped[key].games.push({
-                                id: row.gameNumber || row.GameNumber || (grouped[key].games.length + 1),
+                            return {
+                                id: row.gameNumber || row.GameNumber || (idx + 1),
                                 h: row.homePlayer || row.HomePlayer || row['Home Player'] || '',
                                 v: row.visitPlayer || row.VisitPlayer || row['Visit Player'] || '',
                                 win: isHWin ? 'h' : (isVWin ? 'v' : ''),
@@ -1076,12 +1071,20 @@ async function fetchLiveMatches() {
                                 h8B: row.home8BB || row.Home8BB || row['Home 8BB'] || false,
                                 vTR: row.visitTR || row.VisitTR || row['Visiting TR'] || false,
                                 v8B: row.visit8BB || row.Visiting8BB || row['Visiting 8BB'] || false
-                            });
+                            };
                         });
-                        processedMatches = Object.values(grouped);
+
+                        groupedMatches.push({
+                            date: matchDate,
+                            homeTeam: homeTeamName,
+                            visitTeam: visitTeamName,
+                            homeScore: homeMatchScore,
+                            visitScore: visitMatchScore,
+                            games: games
+                        });
                     }
 
-                    cachedArchivedMatches = processedMatches;
+                    cachedArchivedMatches = groupedMatches;
                     
                     const dates = [...new Set(cachedArchivedMatches.map(m => m.date))].filter(Boolean).sort().reverse();
                     const select = document.getElementById('archive-week-select');
@@ -1097,6 +1100,8 @@ async function fetchLiveMatches() {
                 grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Failed to retrieve approved matches.</p>';
             }
         }
+
+                 
 
 
         function renderArchiveMatches() {
