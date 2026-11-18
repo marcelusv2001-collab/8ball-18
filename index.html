@@ -1022,7 +1022,7 @@ async function fetchLiveMatches() {
     }
 }
 
-         async function fetchArchivedMatches() {
+                 async function fetchArchivedMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
 
@@ -1034,14 +1034,56 @@ async function fetchLiveMatches() {
             grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Fetching official approved matches from database...</p>';
 
             try {
-                // Calls Central DB to retrieve endpoint from Column J and read the Approved Matches tab (18 games = 1 match)
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches&code=${encodeURIComponent(code)}`);
                 const data = await res.json();
 
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
-                    cachedArchivedMatches = data.matches;
+                    // Check if backend returns flat rows that need grouping into 18-game matches
+                    let processedMatches = data.matches;
+
+                    // If your backend returns individual game rows instead of grouped matches, group them by Match/Date/Teams:
+                    if (data.matches[0] && (data.matches[0].GameNumber !== undefined || data.matches[0].gameNumber !== undefined || !Array.isArray(data.matches[0].games))) {
+                        const grouped = {};
+                        data.matches.forEach(row => {
+                            const date = (row.date || row.Timestamp || row.timestamp || 'Recent').split('T')[0];
+                            const homeTeam = row.homeTeam || row.HomeTeam || row['Home Team'] || 'Home Team';
+                            const visitTeam = row.visitTeam || row.VisitTeam || row['Visit Team'] || 'Visiting Team';
+                            const key = `${date}_${homeTeam}_${visitTeam}`;
+
+                            if (!grouped[key]) {
+                                grouped[key] = {
+                                    date: date,
+                                    homeTeam: homeTeam,
+                                    visitTeam: visitTeam,
+                                    homeScore: 0,
+                                    visitScore: 0,
+                                    games: []
+                                };
+                            }
+
+                            const isHWin = row.homeWin === true || row.HomeWin === true || row.win === 'h' || row.Win === 'h';
+                            const isVWin = row.visitWin === true || row.VisitWin === true || row.win === 'v' || row.Win === 'v';
+
+                            if (isHWin) grouped[key].homeScore++;
+                            if (isVWin) grouped[key].visitScore++;
+
+                            grouped[key].games.push({
+                                id: row.gameNumber || row.GameNumber || (grouped[key].games.length + 1),
+                                h: row.homePlayer || row.HomePlayer || row['Home Player'] || '',
+                                v: row.visitPlayer || row.VisitPlayer || row['Visit Player'] || '',
+                                win: isHWin ? 'h' : (isVWin ? 'v' : ''),
+                                hTR: row.homeTR || row.HomeTR || row['Home TR'] || false,
+                                h8B: row.home8BB || row.Home8BB || row['Home 8BB'] || false,
+                                vTR: row.visitTR || row.VisitTR || row['Visiting TR'] || false,
+                                v8B: row.visit8BB || row.Visiting8BB || row['Visiting 8BB'] || false
+                            });
+                        });
+                        processedMatches = Object.values(grouped);
+                    }
+
+                    cachedArchivedMatches = processedMatches;
                     
-                    const dates = [...new Set(cachedArchivedMatches.map(m => (m.date || '').split('T')[0]))].filter(Boolean).sort().reverse();
+                    const dates = [...new Set(cachedArchivedMatches.map(m => m.date))].filter(Boolean).sort().reverse();
                     const select = document.getElementById('archive-week-select');
                     select.innerHTML = '<option value="">-- Select Match Date / Week --</option>' + 
                         dates.map(d => `<option value="${d}">Match Date: ${d}</option>`).join('');
@@ -1055,6 +1097,7 @@ async function fetchLiveMatches() {
                 grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Failed to retrieve approved matches.</p>';
             }
         }
+
 
         function renderArchiveMatches() {
             if (currentModalTab !== 'archive') return;
