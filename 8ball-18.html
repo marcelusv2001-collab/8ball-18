@@ -208,7 +208,7 @@
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
         .settings-content input, .settings-content select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--gold); background: #020617; color: white; font-size: 0.8rem; }
-        .settings-btns { display: flex; gap: 8px; padding-bottom: 4px; }
+        .settings-btns { display: flex; gap: 8px; padding-bottom: 4px; flex-wrap: wrap; }
         .btn-load { flex: 1; background: var(--gold); border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .btn-clear { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .btn-clear-match { background: #475569; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; width: 100%; margin-top: 2px; }
@@ -453,10 +453,10 @@
 <!-- ROLE & SCOREKEEPER SELECTION MODAL -->
 <div id="role-select-modal">
     <div class="modal-content" style="text-align: center; max-width: 400px;">
-        <h2 style="margin-bottom: 8px;">🏆 Claim Scorekeeper Role</h2>
+        <h2 style="margin-bottom: 8px;">🏆 Match Role Selection</h2>
         <div id="active-sk-warning" class="active-sk-alert"></div>
         <p style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 14px;">
-            Select your team to keep score.
+            Select your team to keep score, or join as a spectator.
         </p>
 
         <!-- Step 1: Choose Role -->
@@ -467,6 +467,11 @@
             <button type="button" class="role-btn" onclick="selectScorekeeperSide('visitor')" style="background: #7f1d1d; color: #fff; border: 1px solid #ef4444;">
                 🚗 Visiting (<span id="prompt-visit-name">Visiting Team</span>) - Scorekeeper
             </button>
+            <div style="margin-top: 4px; border-top: 1px solid #334155; padding-top: 10px;">
+                <button type="button" class="role-btn" onclick="selectSpectatorMode()" style="background: #475569; color: #fff; border: 1px solid #64748b;">
+                    👀 I'm Just Watching (Spectator)
+                </button>
+            </div>
         </div>
 
         <!-- Step 2: Pick Player Name from Selected Roster -->
@@ -647,12 +652,12 @@
         </div>
         
         <div class="settings-btns">
-    <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
-    <button type="button" class="btn-clear" onclick="closeSettingsPanel()" style="background: #475569; color: white;">CLOSE</button>
-    <button type="button" class="btn-clear" onclick="returnToLanding()" style="background: #1e293b; color: var(--gold); border: 1px solid var(--gold);">🏠 Home Page</button>
-    <button type="button" id="timer-btn" class="btn-timer" onclick="openTimerModal()">⏱️ <span id="timer-display">00:00</span></button>
-</div>
-
+            <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
+            <button type="button" class="btn-clear" onclick="closeSettingsPanel()" style="background: #475569; color: white;">CLOSE</button>
+            <button type="button" class="btn-clear" onclick="returnToLanding()" style="background: #1e293b; color: var(--gold); border: 1px solid var(--gold);">🏠 Home Page</button>
+            <button type="button" id="timer-btn" class="btn-timer" onclick="openTimerModal()">⏱️ <span id="timer-display">00:00</span></button>
+        </div>
+    </div>
 </details>
     
 <main id="scoring-interface">
@@ -708,6 +713,7 @@
     let myRole = localStorage.getItem('active_match_role') || 'spectator'; // 'home', 'visitor', or 'spectator'
     let myScorekeeperName = localStorage.getItem('active_scorekeeper_name') || '';
     let activeScorekeeperInfo = JSON.parse(localStorage.getItem('remote_active_scorekeeper') || 'null');
+    let pendingExistingScorekeeper = null;
     let pendingRoleSide = '';
     let pendingSyncQueue = false;
 
@@ -849,13 +855,14 @@
             return;
         }
 
+        pendingExistingScorekeeper = existingScorekeeper;
         document.getElementById('prompt-home-name').innerText = hTeam;
         document.getElementById('prompt-visit-name').innerText = vTeam;
 
         const warningBox = document.getElementById('active-sk-warning');
         if (existingScorekeeper && existingScorekeeper.name) {
             const sideLabel = existingScorekeeper.side === 'home' ? 'Home Team' : 'Visiting Team';
-            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is currently keeping score. Taking over will assign scorekeeper control to you.`;
+            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is currently keeping score. Selecting a team below will take over scorekeeper control.`;
             warningBox.style.display = 'block';
         } else {
             warningBox.style.display = 'none';
@@ -863,6 +870,41 @@
 
         backToRoleStep1();
         document.getElementById('role-select-modal').style.display = 'flex';
+    }
+
+    async function selectSpectatorMode() {
+        document.getElementById('role-select-modal').style.display = 'none';
+
+        const hTeam = (document.getElementById('h-team').value || "Home Team").trim();
+        const vTeam = (document.getElementById('v-team').value || "Visiting Team").trim();
+
+        myRole = 'spectator';
+        myScorekeeperName = '';
+
+        let activeSk = pendingExistingScorekeeper;
+        const leagueCode = localStorage.getItem('league_code');
+        if (leagueCode && navigator.onLine) {
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                const data = await res.json();
+                if (data.status === 'success' && Array.isArray(data.matches)) {
+                    const found = data.matches.find(m => 
+                        (m.homeTeam || '').trim().toUpperCase() === hTeam.toUpperCase() &&
+                        (m.visitTeam || m.visit || '').trim().toUpperCase() === vTeam.toUpperCase()
+                    );
+                    if (found && found.scorekeeperName) {
+                        activeSk = { name: found.scorekeeperName, side: found.scorekeeperSide };
+                        if (found.games && Array.isArray(found.games)) state = found.games;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        activeScorekeeperInfo = activeSk || { name: 'Active Scorekeeper', side: 'home' };
+        localStorage.setItem('active_match_role', 'spectator');
+        localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+        saveMatchState();
+        draw();
     }
 
     function selectScorekeeperSide(side) {
@@ -949,10 +991,10 @@
         draw();
     }
 
-function closeSettingsPanel() {
-    const setupPanel = document.getElementById('setup-panel');
-    if (setupPanel) setupPanel.open = false;
-}
+    function closeSettingsPanel() {
+        const setupPanel = document.getElementById('setup-panel');
+        if (setupPanel) setupPanel.open = false;
+    }
     
     async function pollRemoteMatchStatus() {
         const leagueCode = localStorage.getItem('league_code');
