@@ -1156,7 +1156,8 @@ async function fetchLiveMatches() {
                 `;
             }).join('');
         }
-            async function fetchArchivedMatches() {
+
+                async function fetchArchivedMatches() {
             const grid = document.getElementById('live-matches-grid');
             const code = localStorage.getItem('league_code') || "";
 
@@ -1168,14 +1169,24 @@ async function fetchLiveMatches() {
             grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Fetching official approved matches from database...</p>';
 
             try {
-                // Calls Central DB to retrieve endpoint from Column J and read the Approved Matches tab (18 games = 1 match)
+                // Calls Central DB to read directly from the backend endpoint structure (Column J / Approved Matches tab)
                 const res = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches&code=${encodeURIComponent(code)}`);
                 const data = await res.json();
 
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
-                    cachedArchivedMatches = data.matches;
+                    cachedArchivedMatches = data.matches.map(m => {
+                        // Maps your backend's exact fields directly to the display properties
+                        return {
+                            date: m.date || (m.timestamp ? m.timestamp.split('T')[0] : 'Recent'),
+                            homeTeam: m.homeTeam || m.home || 'Home Team',
+                            visitTeam: m.visitTeam || m.visit || 'Visiting Team',
+                            homeScore: m.homeScore !== undefined ? m.homeScore : 0,
+                            visitScore: m.visitScore !== undefined ? m.visitScore : 0,
+                            games: Array.isArray(m.games) ? m.games : []
+                        };
+                    });
                     
-                    const dates = [...new Set(cachedArchivedMatches.map(m => (m.date || '').split('T')[0]))].filter(Boolean).sort().reverse();
+                    const dates = [...new Set(cachedArchivedMatches.map(m => m.date))].filter(Boolean).sort().reverse();
                     const select = document.getElementById('archive-week-select');
                     select.innerHTML = '<option value="">-- Select Match Date / Week --</option>' + 
                         dates.map(d => `<option value="${d}">Match Date: ${d}</option>`).join('');
@@ -1189,6 +1200,7 @@ async function fetchLiveMatches() {
                 grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Failed to retrieve approved matches.</p>';
             }
         }
+
 
         function renderArchiveMatches() {
             if (currentModalTab !== 'archive') return;
