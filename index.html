@@ -535,9 +535,6 @@
             <button type="button" class="btn-announce-trigger" onclick="toggleSpectatorModal(true)" style="background: #1e3a8a; border-color: #3b82f6;">
                 <span class="live-dot"></span> Live Scores ▾
             </button>
-            <button type="button" class="btn-announce-trigger" onclick="toggleArchiveModal(true)" style="background: #475569; border-color: var(--gold); color: var(--gold);">
-                📂 Approved Archives
-            </button>
             <a href="#features" class="nav-link-text">Features</a>
             <a href="#how-it-works" class="nav-link-text">How It Works</a>
             <a href="#faq" class="nav-link-text">FAQ</a>
@@ -568,29 +565,6 @@
                 <p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Loading live matches...</p>
             </div>
             <button onclick="toggleSpectatorModal(false)" style="background: var(--slate); color: #fff; border: 1px solid var(--slate); width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.8rem;">CLOSE</button>
-        </div>
-    </div>
-
-    <!-- DEDICATED APPROVED ARCHIVE MATCHES MODAL -->
-    <div id="archive-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate); padding-bottom: 6px; margin-bottom: 8px;">
-                <h2 style="color: var(--gold); margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
-                    📂 Official Approved Match Archives
-                </h2>
-                <button onclick="toggleArchiveModal(false)" style="background: none; border: none; color: var(--text-sub); font-size: 1.25rem; cursor: pointer; line-height: 1;">&times;</button>
-            </div>
-
-            <div style="margin-bottom: 8px;">
-                <select id="archive-week-select" onchange="renderArchiveMatches()" style="width: 100%; padding: 6px; background: var(--bg); color: #fff; border: 1px solid var(--gold); border-radius: 6px; font-size: 0.75rem;">
-                    <option value="">-- Select Match Date / Week --</option>
-                </select>
-            </div>
-
-            <div id="archive-matches-grid" style="max-height: 60vh; overflow-y: auto; padding: 2px;">
-                <p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Click approved archives to load...</p>
-            </div>
-            <button onclick="toggleArchiveModal(false)" style="background: var(--slate); color: #fff; border: 1px solid var(--slate); width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.8rem;">CLOSE</button>
         </div>
     </div>
 
@@ -853,9 +827,7 @@
         }
 
         let spectatorInterval = null;
-        let cachedArchivedMatches = [];
         const openLiveScorecards = new Set();
-        const openArchiveScorecards = new Set();
 
         function stopSpectatorPolling() {
             if (spectatorInterval) {
@@ -875,14 +847,6 @@
             }
         }
 
-        function toggleArchiveModal(show) {
-            const modal = document.getElementById('archive-modal');
-            modal.style.display = show ? 'flex' : 'none';
-            if (show) {
-                fetchArchivedMatches();
-            }
-        }
-
         function toggleLiveScorecard(matchId) {
             if (openLiveScorecards.has(matchId)) {
                 openLiveScorecards.delete(matchId);
@@ -890,15 +854,6 @@
                 openLiveScorecards.add(matchId);
             }
             fetchLiveMatches();
-        }
-
-        function toggleArchiveScorecard(matchId) {
-            if (openArchiveScorecards.has(matchId)) {
-                openArchiveScorecards.delete(matchId);
-            } else {
-                openArchiveScorecards.add(matchId);
-            }
-            renderArchiveMatches();
         }
 
         async function fetchLiveMatches() {
@@ -1031,143 +986,6 @@
                     grid.scrollTop = scrollPos;
                 }
             }
-        }
-        
-async function fetchArchivedMatches() {
-    const grid = document.getElementById('archive-matches-grid');
-    const code = localStorage.getItem('league_code') || "";
-
-    if (cachedArchivedMatches.length > 0) {
-        renderArchiveMatches();
-        return;
-    }
-
-    grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Fetching official approved matches from database...</p>';
-
-    try {
-        // Updated action parameter to 'getArchive' to match your Central DB endpoint routing
-        const res = await fetch(`${CENTRAL_DB_URL}?action=getArchive&code=${encodeURIComponent(code)}&cb=${Date.now()}`);
-        const data = await res.json();
-        
-        console.log("Archive API Response:", data);
-
-        // Handle both JSON-blob storage or flat row chunking gracefully
-        if (data.status === 'success' && data.matches && data.matches.length > 0) {
-            cachedArchivedMatches = data.matches.map(m => {
-                // If stored as a JSON string payload or object
-                let parsedMatch = m;
-                if (typeof m.payload === 'string') {
-                    try { parsedMatch = JSON.parse(m.payload); } catch(err) {}
-                }
-                return {
-                    date: parsedMatch.date || m.timestamp?.split('T')[0] || 'Recent',
-                    homeTeam: parsedMatch.homeTeam || m.homeTeam || 'Home Team',
-                    visitTeam: parsedMatch.visitTeam || m.visitTeam || 'Visiting Team',
-                    homeScore: parsedMatch.homeScore ?? 0,
-                    visitScore: parsedMatch.visitScore ?? 0,
-                    games: parsedMatch.games || []
-                };
-            });
-            
-            const dates = [...new Set(cachedArchivedMatches.map(m => m.date))].filter(Boolean).sort().reverse();
-            const select = document.getElementById('archive-week-select');
-            if (select) {
-                select.innerHTML = '<option value="">-- Select Match Date / Week --</option>' + 
-                    dates.map(d => `<option value="${d}">Match Date: ${d}</option>`).join('');
-                if (dates.length > 0) select.value = dates[0];
-            }
-
-            renderArchiveMatches();
-        } else {
-            grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No approved matches found in the league database.</p>';
-        }
-    } catch(e) {
-        console.error("Archive fetch error:", e);
-        grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Failed to retrieve approved matches.</p>';
-    }
-}
-
-                
-
-
-        function renderArchiveMatches() {
-            const grid = document.getElementById('archive-matches-grid');
-            const selectedDate = document.getElementById('archive-week-select').value;
-            
-            const filtered = cachedArchivedMatches.filter(m => !selectedDate || m.date === selectedDate);
-
-            if (filtered.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No approved matches found for this date.</p>';
-                return;
-            }
-
-            grid.innerHTML = filtered.map((m, mIdx) => {
-                const matchId = `arch_${m.homeTeam}_${m.visitTeam}_${m.date}`.replace(/[^a-zA-Z0-9]/g, '_');
-                const isOpen = openArchiveScorecards.has(matchId);
-
-                const gamesHtml = (m.games || []).map((g, idx) => {
-                    let winClass = '';
-                    if (g.win === 'h') winClass = 'win-h';
-                    if (g.win === 'v') winClass = 'win-v';
-
-                    let markerBadge = '';
-                    if (g.h8B || g.v8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                    else if (g.hTR || g.vTR) markerBadge = '<span class="badge-run">TR</span>';
-
-                    return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
-                }).join('');
-
-                const detailedGamesList = (m.games || []).map((g, idx) => {
-                    const isHWin = g.win === 'h';
-                    const isVWin = g.win === 'v';
-                    const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
-                    const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-
-                    const hMarkers = (g.hTR || g.h8B) ? ` [${g.hTR ? 'TR' : ''}${g.h8B ? '8BB' : ''}]` : '';
-                    const vMarkers = (g.vTR || g.v8B) ? ` [${g.vTR ? 'TR' : ''}${g.v8B ? '8BB' : ''}]` : '';
-
-                    return `
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--gold); min-width: 40px;">Gm ${g.id || idx + 1}:</span>
-                            <span style="flex: 1; text-align: left; ${hWinStyle}">
-                                ${g.h || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
-                            </span>
-                            <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
-                            <span style="flex: 1; text-align: right; ${vWinStyle}">
-                                <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${g.v || '(Open)'} ${isVWin ? '✓' : ''}
-                            </span>
-                        </div>
-                    `;
-                }).join('');
-
-                return `
-                    <div class="live-card" style="border-color: #475569;">
-                        <div class="live-card-header">
-                            <span>APPROVED — ${m.date || 'COMPLETED'}</span>
-                            <span style="color: #38bdf8;">OFFICIAL</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.homeTeam}</span>
-                            <span class="live-score-badge">${m.homeScore}</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.visitTeam}</span>
-                            <span class="live-score-badge">${m.visitScore}</span>
-                        </div>
-                        <div class="game-breakdown-bar" style="margin-top: 8px;">
-                            ${gamesHtml}
-                        </div>
-                        <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
-                            <button onclick="toggleArchiveScorecard('${matchId}')" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
-                                📋 View Official Scorecard ${isOpen ? '▴' : '▾'}
-                            </button>
-                            <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
-                                ${detailedGamesList}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
         }
     </script>
 </body>
