@@ -535,6 +535,9 @@
             <button type="button" class="btn-announce-trigger" onclick="toggleSpectatorModal(true)" style="background: #1e3a8a; border-color: #3b82f6;">
                 <span class="live-dot"></span> Live Scores ▾
             </button>
+            <button type="button" class="btn-announce-trigger" onclick="toggleArchiveModal(true)" style="background: #475569; border-color: var(--gold); color: var(--gold);">
+                📂 Approved Archives
+            </button>
             <a href="#features" class="nav-link-text">Features</a>
             <a href="#how-it-works" class="nav-link-text">How It Works</a>
             <a href="#faq" class="nav-link-text">FAQ</a>
@@ -560,22 +563,34 @@
                 </h2>
                 <button onclick="toggleSpectatorModal(false)" style="background: none; border: none; color: var(--text-sub); font-size: 1.25rem; cursor: pointer; line-height: 1;">&times;</button>
             </div>
-            <!-- TAB SWITCHER & WEEK FILTER -->
-            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                <button onclick="switchTab('live')" id="tab-live-btn" style="flex: 1; background: var(--gold); color: #000; border: none; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">🔴 Live Matches</button>
-                <button onclick="switchTab('archive')" id="tab-archive-btn" style="flex: 1; background: var(--slate); color: #fff; border: none; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">📂 Previous Matches</button>
-            </div>
-
-            <div id="archive-date-filter-container" style="display: none; margin-bottom: 8px;">
-                <select id="archive-week-select" onchange="renderArchiveMatches()" style="width: 100%; padding: 6px; background: var(--bg); color: #fff; border: 1px solid var(--gold); border-radius: 6px; font-size: 0.75rem;">
-                    <option value="">-- Select Match Date / Week --</option>
-                </select>
-            </div>
 
             <div id="live-matches-grid" style="max-height: 60vh; overflow-y: auto; padding: 2px;">
                 <p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Loading live matches...</p>
             </div>
             <button onclick="toggleSpectatorModal(false)" style="background: var(--slate); color: #fff; border: 1px solid var(--slate); width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.8rem;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- DEDICATED APPROVED ARCHIVE MATCHES MODAL -->
+    <div id="archive-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate); padding-bottom: 6px; margin-bottom: 8px;">
+                <h2 style="color: var(--gold); margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                    📂 Official Approved Match Archives
+                </h2>
+                <button onclick="toggleArchiveModal(false)" style="background: none; border: none; color: var(--text-sub); font-size: 1.25rem; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <select id="archive-week-select" onchange="renderArchiveMatches()" style="width: 100%; padding: 6px; background: var(--bg); color: #fff; border: 1px solid var(--gold); border-radius: 6px; font-size: 0.75rem;">
+                    <option value="">-- Select Match Date / Week --</option>
+                </select>
+            </div>
+
+            <div id="archive-matches-grid" style="max-height: 60vh; overflow-y: auto; padding: 2px;">
+                <p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Click approved archives to load...</p>
+            </div>
+            <button onclick="toggleArchiveModal(false)" style="background: var(--slate); color: #fff; border: 1px solid var(--slate); width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.8rem;">CLOSE</button>
         </div>
     </div>
 
@@ -838,9 +853,9 @@
         }
 
         let spectatorInterval = null;
-        let currentModalTab = 'live';
         let cachedArchivedMatches = [];
-        const openScorecards = new Set();
+        const openLiveScorecards = new Set();
+        const openArchiveScorecards = new Set();
 
         function stopSpectatorPolling() {
             if (spectatorInterval) {
@@ -853,176 +868,173 @@
             const modal = document.getElementById('spectator-modal');
             modal.style.display = show ? 'flex' : 'none';
             if (show) {
-                switchTab('live');
-            } else {
-                stopSpectatorPolling();
-            }
-        }
-
-        function switchTab(tab) {
-            currentModalTab = tab;
-            document.getElementById('tab-live-btn').style.background = tab === 'live' ? 'var(--gold)' : 'var(--slate)';
-            document.getElementById('tab-live-btn').style.color = tab === 'live' ? '#000' : '#fff';
-            document.getElementById('tab-archive-btn').style.background = tab === 'archive' ? 'var(--gold)' : 'var(--slate)';
-            document.getElementById('tab-archive-btn').style.color = tab === 'archive' ? '#000' : '#fff';
-            
-            document.getElementById('archive-date-filter-container').style.display = tab === 'archive' ? 'block' : 'none';
-
-            if (tab === 'live') {
-                stopSpectatorPolling();
                 fetchLiveMatches();
                 spectatorInterval = setInterval(fetchLiveMatches, 10000);
             } else {
                 stopSpectatorPolling();
+            }
+        }
+
+        function toggleArchiveModal(show) {
+            const modal = document.getElementById('archive-modal');
+            modal.style.display = show ? 'flex' : 'none';
+            if (show) {
                 fetchArchivedMatches();
             }
         }
 
-        function toggleScorecard(matchId) {
-            if (openScorecards.has(matchId)) {
-                openScorecards.delete(matchId);
+        function toggleLiveScorecard(matchId) {
+            if (openLiveScorecards.has(matchId)) {
+                openLiveScorecards.delete(matchId);
             } else {
-                openScorecards.add(matchId);
+                openLiveScorecards.add(matchId);
             }
+            fetchLiveMatches();
         }
 
-        
-async function fetchLiveMatches() {
-    const grid = document.getElementById('live-matches-grid');
-    if (!grid) return;
-
-    const scrollPos = grid.scrollTop;
-    // Fallback code for fresh or incognito sessions if local storage isn't set yet
-    const code = localStorage.getItem('league_code') || "482910";
-
-    try {
-        const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
-        const data = await res.json();
-
-        if (data.status === 'success' && data.matches && data.matches.length > 0) {
-            grid.innerHTML = data.matches.map((m, mIdx) => {
-                const matchId = `live_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
-                const isOpen = openScorecards.has(matchId);
-
-                const gamesHtml = (m.games || []).map((g, idx) => {
-                    let winClass = '';
-                    const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
-                    const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
-                    
-                    if (isHWin) winClass = 'win-h';
-                    if (isVWin) winClass = 'win-v';
-
-                    let markerBadge = '';
-                    const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
-                    const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
-
-                    if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                    else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
-
-                    return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
-                }).join('');
-
-                const detailedGamesList = (m.games || []).map((g, idx) => {
-                    const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
-                    const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
-                    const winner = g.win;
-
-                    if (!hName && !vName && !winner) return '';
-
-                    const isHWin = winner === 'h' || g.homeWin === true;
-                    const isVWin = winner === 'v' || g.visitWin === true;
-
-                    const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
-                    const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-
-                    const hTR = g.hTR || g.homeTR ? 'TR' : '';
-                    const h8B = g.h8B || g.home8BB ? '8BB' : '';
-                    const vTR = g.vTR || g.visitTR ? 'TR' : '';
-                    const v8B = g.v8B || g.visit8BB ? '8BB' : '';
-
-                    const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
-                    const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
-
-                    const gameNumber = g.id || (idx + 1);
-
-                    return `
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
-                            <span style="flex: 1; text-align: left; ${hWinStyle}">
-                                ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
-                            </span>
-                            <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
-                            <span style="flex: 1; text-align: right; ${vWinStyle}">
-                                <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
-                            </span>
-                        </div>
-                    `;
-                }).join('');
-
-                const currentRackNum = m.currentRack || 1;
-                const activeGame = (m.games || []).find(g => g.id === currentRackNum) || (m.games || [])[currentRackNum - 1];
-                const hPlayer = activeGame ? (activeGame.h || activeGame.homePlayer || 'Home') : 'Home';
-                const vPlayer = activeGame ? (activeGame.v || activeGame.visitPlayer || 'Away') : 'Away';
-
-                // Scorekeeper Badge display (fixed interpolation syntax)
-                const sideLabel = m.scorekeeperSide === 'home' ? 'Home Team' : (m.scorekeeperSide === 'visitor' ? 'Visiting Team' : '');
-                const scorekeeperBadge = m.scorekeeperName
-                    ? `<div style="font-size: 0.74rem; color: #fde68a; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; padding: 5px 8px; margin-top: 6px; text-align: center;">
-                           ✍️ Scorekeeper: <b>${m.scorekeeperName}</b> (${sideLabel})
-                       </div>`
-                    : `<div style="font-size: 0.72rem; color: #94a3b8; margin-top: 5px; text-align: center;">
-                           ⏳ Waiting for scorekeeper...
-                       </div>`;
-
-                return `
-                    <div class="live-card">
-                        <div class="live-card-header">
-                            <span>MATCH #${mIdx + 1} — GAME ${currentRackNum} OF 18</span>
-                            <span style="color: #22c55e;">● LIVE</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.homeTeam || 'Home Team'}</span>
-                            <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.visitTeam || 'Visiting Team'}</span>
-                            <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
-                        </div>
-                        ${scorekeeperBadge}
-                        <div class="active-matchup-bar">
-                            <span class="active-player" style="color: #60a5fa;">${hPlayer}</span>
-                            <span style="color: var(--gold); font-size: 0.65rem; font-weight: bold;">GM ${currentRackNum}</span>
-                            <span class="active-player" style="color: #f87171;">${vPlayer}</span>
-                        </div>
-                        <div class="game-breakdown-bar">
-                            ${gamesHtml}
-                        </div>
-                        <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
-                            <button onclick="toggleScorecard('${matchId}'); fetchLiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
-                                📋 View Match Scorecard ${isOpen ? '▴' : '▾'}
-                            </button>
-                            <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
-                                ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded yet.</p>'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        } else {
-            if (!grid.innerHTML.trim() || grid.innerHTML.includes('Loading')) {
-                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No active matches currently in progress.</p>';
+        function toggleArchiveScorecard(matchId) {
+            if (openArchiveScorecards.has(matchId)) {
+                openArchiveScorecards.delete(matchId);
+            } else {
+                openArchiveScorecards.add(matchId);
             }
+            renderArchiveMatches();
         }
-    } catch (e) {
-        // Background polling error handler
-    } finally {
-        if (grid) {
-            grid.scrollTop = scrollPos;
-        }
-    }
-}
-        async function fetchArchivedMatches() {
+
+        async function fetchLiveMatches() {
             const grid = document.getElementById('live-matches-grid');
+            if (!grid) return;
+
+            const scrollPos = grid.scrollTop;
+            const code = localStorage.getItem('league_code') || "482910";
+
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(code)}`);
+                const data = await res.json();
+
+                if (data.status === 'success' && data.matches && data.matches.length > 0) {
+                    grid.innerHTML = data.matches.map((m, mIdx) => {
+                        const matchId = `live_${m.homeTeam}_${m.visitTeam}`.replace(/[^a-zA-Z0-9]/g, '_');
+                        const isOpen = openLiveScorecards.has(matchId);
+
+                        const gamesHtml = (m.games || []).map((g, idx) => {
+                            let winClass = '';
+                            const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
+                            const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
+                            
+                            if (isHWin) winClass = 'win-h';
+                            if (isVWin) winClass = 'win-v';
+
+                            let markerBadge = '';
+                            const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
+                            const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
+
+                            if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
+                            else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
+
+                            return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
+                        }).join('');
+
+                        const detailedGamesList = (m.games || []).map((g, idx) => {
+                            const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
+                            const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
+                            const winner = g.win;
+
+                            if (!hName && !vName && !winner) return '';
+
+                            const isHWin = winner === 'h' || g.homeWin === true;
+                            const isVWin = winner === 'v' || g.visitWin === true;
+
+                            const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
+                            const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
+
+                            const hTR = g.hTR || g.homeTR ? 'TR' : '';
+                            const h8B = g.h8B || g.home8BB ? '8BB' : '';
+                            const vTR = g.vTR || g.visitTR ? 'TR' : '';
+                            const v8B = g.v8B || g.visit8BB ? '8BB' : '';
+
+                            const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
+                            const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
+                            const gameNumber = g.id || (idx + 1);
+
+                            return `
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
+                                    <span style="flex: 1; text-align: left; ${hWinStyle}">
+                                        ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
+                                    </span>
+                                    <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
+                                    <span style="flex: 1; text-align: right; ${vWinStyle}">
+                                        <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('');
+
+                        const currentRackNum = m.currentRack || 1;
+                        const activeGame = (m.games || []).find(g => g.id === currentRackNum) || (m.games || [])[currentRackNum - 1];
+                        const hPlayer = activeGame ? (activeGame.h || activeGame.homePlayer || 'Home') : 'Home';
+                        const vPlayer = activeGame ? (activeGame.v || activeGame.visitPlayer || 'Away') : 'Away';
+
+                        const sideLabel = m.scorekeeperSide === 'home' ? 'Home Team' : (m.scorekeeperSide === 'visitor' ? 'Visiting Team' : '');
+                        const scorekeeperBadge = m.scorekeeperName
+                            ? `<div style="font-size: 0.74rem; color: #fde68a; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; padding: 5px 8px; margin-top: 6px; text-align: center;">
+                                   ✍️ Scorekeeper: <b>${m.scorekeeperName}</b> (${sideLabel})
+                               </div>`
+                            : `<div style="font-size: 0.72rem; color: #94a3b8; margin-top: 5px; text-align: center;">
+                                   ⏳ Waiting for scorekeeper...
+                               </div>`;
+
+                        return `
+                            <div class="live-card">
+                                <div class="live-card-header">
+                                    <span>MATCH #${mIdx + 1} — GAME ${currentRackNum} OF 18</span>
+                                    <span style="color: #22c55e;">● LIVE</span>
+                                </div>
+                                <div class="live-team-row">
+                                    <span>${m.homeTeam || 'Home Team'}</span>
+                                    <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
+                                </div>
+                                <div class="live-team-row">
+                                    <span>${m.visitTeam || 'Visiting Team'}</span>
+                                    <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
+                                </div>
+                                ${scorekeeperBadge}
+                                <div class="active-matchup-bar">
+                                    <span class="active-player" style="color: #60a5fa;">${hPlayer}</span>
+                                    <span style="color: var(--gold); font-size: 0.65rem; font-weight: bold;">GM ${currentRackNum}</span>
+                                    <span class="active-player" style="color: #f87171;">${vPlayer}</span>
+                                </div>
+                                <div class="game-breakdown-bar">
+                                    ${gamesHtml}
+                                </div>
+                                <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
+                                    <button onclick="toggleLiveScorecard('${matchId}')" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
+                                        📋 View Match Scorecard ${isOpen ? '▴' : '▾'}
+                                    </button>
+                                    <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
+                                        ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded yet.</p>'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    if (!grid.innerHTML.trim() || grid.innerHTML.includes('Loading')) {
+                        grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No active matches currently in progress.</p>';
+                    }
+                }
+            } catch (e) {
+                // Background polling error handler
+            } finally {
+                if (grid) {
+                    grid.scrollTop = scrollPos;
+                }
+            }
+        }
+
+        async function fetchArchivedMatches() {
+            const grid = document.getElementById('archive-matches-grid');
             const code = localStorage.getItem('league_code') || "";
 
             if (cachedArchivedMatches.length > 0) {
@@ -1037,7 +1049,7 @@ async function fetchLiveMatches() {
                 const data = await res.json();
 
                 if (data.status === 'success' && data.matches && data.matches.length > 0) {
-                    // Reverse-engineer the batch package: group every 18 rows into 1 complete match object
+                    // Reverse-engineer backend batch package: group every 18 rows into 1 match
                     const rawRows = data.matches;
                     const groupedMatches = [];
                     
@@ -1045,7 +1057,6 @@ async function fetchLiveMatches() {
                         const chunk = rawRows.slice(i, i + 18);
                         if (chunk.length === 0) continue;
 
-                        // Pull match-level details from the first row of the chunk
                         const firstRow = chunk[0];
                         const matchDate = (firstRow.date || firstRow.Timestamp || firstRow.timestamp || 'Recent').split('T')[0];
                         const homeTeamName = firstRow.homeTeam || firstRow.HomeTeam || firstRow['Home Team'] || 'Home Team';
@@ -1054,7 +1065,6 @@ async function fetchLiveMatches() {
                         let homeMatchScore = 0;
                         let visitMatchScore = 0;
 
-                        // Map each row back into a game frame
                         const games = chunk.map((row, idx) => {
                             const isHWin = row.homeWin === true || row.HomeWin === true || row.win === 'h' || row.Win === 'h';
                             const isVWin = row.visitWin === true || row.VisitWin === true || row.win === 'v' || row.Win === 'v';
@@ -1101,13 +1111,8 @@ async function fetchLiveMatches() {
             }
         }
 
-                 
-
-
         function renderArchiveMatches() {
-            if (currentModalTab !== 'archive') return;
-
-            const grid = document.getElementById('live-matches-grid');
+            const grid = document.getElementById('archive-matches-grid');
             const selectedDate = document.getElementById('archive-week-select').value;
             
             const filtered = cachedArchivedMatches.filter(m => !selectedDate || m.date === selectedDate);
@@ -1119,57 +1124,38 @@ async function fetchLiveMatches() {
 
             grid.innerHTML = filtered.map((m, mIdx) => {
                 const matchId = `arch_${m.homeTeam}_${m.visitTeam}_${m.date}`.replace(/[^a-zA-Z0-9]/g, '_');
-                const isOpen = openScorecards.has(matchId);
+                const isOpen = openArchiveScorecards.has(matchId);
 
                 const gamesHtml = (m.games || []).map((g, idx) => {
                     let winClass = '';
-                    const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
-                    const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
-                    
-                    if (isHWin) winClass = 'win-h';
-                    if (isVWin) winClass = 'win-v';
+                    if (g.win === 'h') winClass = 'win-h';
+                    if (g.win === 'v') winClass = 'win-v';
 
                     let markerBadge = '';
-                    const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
-                    const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
-
-                    if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                    else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
+                    if (g.h8B || g.v8B) markerBadge = '<span class="badge-8bb">8B</span>';
+                    else if (g.hTR || g.vTR) markerBadge = '<span class="badge-run">TR</span>';
 
                     return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
                 }).join('');
 
                 const detailedGamesList = (m.games || []).map((g, idx) => {
-                    const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
-                    const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
-                    const winner = g.win;
-
-                    if (!hName && !vName && !winner) return '';
-
-                    const isHWin = winner === 'h' || g.homeWin === true;
-                    const isVWin = winner === 'v' || g.visitWin === true;
-
+                    const isHWin = g.win === 'h';
+                    const isVWin = g.win === 'v';
                     const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
                     const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
 
-                    const hTR = g.hTR || g.homeTR ? 'TR' : '';
-                    const h8B = g.h8B || g.home8BB ? '8BB' : '';
-                    const vTR = g.vTR || g.visitTR ? 'TR' : '';
-                    const v8B = g.v8B || g.visit8BB ? '8BB' : '';
-
-                    const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
-                    const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
-                    const gameNumber = g.id || (idx + 1);
+                    const hMarkers = (g.hTR || g.h8B) ? ` [${g.hTR ? 'TR' : ''}${g.h8B ? '8BB' : ''}]` : '';
+                    const vMarkers = (g.vTR || g.v8B) ? ` [${g.vTR ? 'TR' : ''}${g.v8B ? '8BB' : ''}]` : '';
 
                     return `
                         <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
+                            <span style="color: var(--gold); min-width: 40px;">Gm ${g.id || idx + 1}:</span>
                             <span style="flex: 1; text-align: left; ${hWinStyle}">
-                                ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
+                                ${g.h || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
                             </span>
                             <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
                             <span style="flex: 1; text-align: right; ${vWinStyle}">
-                                <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
+                                <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${g.v || '(Open)'} ${isVWin ? '✓' : ''}
                             </span>
                         </div>
                     `;
@@ -1182,176 +1168,28 @@ async function fetchLiveMatches() {
                             <span style="color: #38bdf8;">OFFICIAL</span>
                         </div>
                         <div class="live-team-row">
-                            <span>${m.homeTeam || 'Home Team'}</span>
-                            <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
+                            <span>${m.homeTeam}</span>
+                            <span class="live-score-badge">${m.homeScore}</span>
                         </div>
                         <div class="live-team-row">
-                            <span>${m.visitTeam || 'Visiting Team'}</span>
-                            <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
+                            <span>${m.visitTeam}</span>
+                            <span class="live-score-badge">${m.visitScore}</span>
                         </div>
                         <div class="game-breakdown-bar" style="margin-top: 8px;">
                             ${gamesHtml}
                         </div>
                         <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
-                            <button onclick="toggleScorecard('${matchId}'); renderArchiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
+                            <button onclick="toggleArchiveScorecard('${matchId}')" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
                                 📋 View Official Scorecard ${isOpen ? '▴' : '▾'}
                             </button>
                             <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
-                                ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded.</p>'}
+                                ${detailedGamesList}
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
-
-                async function fetchArchivedMatches() {
-            const grid = document.getElementById('live-matches-grid');
-            const code = localStorage.getItem('league_code') || "";
-
-            if (cachedArchivedMatches.length > 0) {
-                renderArchiveMatches();
-                return;
-            }
-
-            grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Fetching official approved matches from database...</p>';
-
-            try {
-                // Calls Central DB to read directly from the backend endpoint structure (Column J / Approved Matches tab)
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getArchiveMatches&code=${encodeURIComponent(code)}`);
-                const data = await res.json();
-
-                if (data.status === 'success' && data.matches && data.matches.length > 0) {
-                    cachedArchivedMatches = data.matches.map(m => {
-                        // Maps your backend's exact fields directly to the display properties
-                        return {
-                            date: m.date || (m.timestamp ? m.timestamp.split('T')[0] : 'Recent'),
-                            homeTeam: m.homeTeam || m.home || 'Home Team',
-                            visitTeam: m.visitTeam || m.visit || 'Visiting Team',
-                            homeScore: m.homeScore !== undefined ? m.homeScore : 0,
-                            visitScore: m.visitScore !== undefined ? m.visitScore : 0,
-                            games: Array.isArray(m.games) ? m.games : []
-                        };
-                    });
-                    
-                    const dates = [...new Set(cachedArchivedMatches.map(m => m.date))].filter(Boolean).sort().reverse();
-                    const select = document.getElementById('archive-week-select');
-                    select.innerHTML = '<option value="">-- Select Match Date / Week --</option>' + 
-                        dates.map(d => `<option value="${d}">Match Date: ${d}</option>`).join('');
-
-                    if (dates.length > 0) select.value = dates[0];
-                    renderArchiveMatches();
-                } else {
-                    grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No approved matches found in the league database.</p>';
-                }
-            } catch(e) {
-                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">Failed to retrieve approved matches.</p>';
-            }
-        }
-
-
-        function renderArchiveMatches() {
-            if (currentModalTab !== 'archive') return;
-
-            const grid = document.getElementById('live-matches-grid');
-            const selectedDate = document.getElementById('archive-week-select').value;
-            
-            const filtered = cachedArchivedMatches.filter(m => !selectedDate || m.date === selectedDate);
-
-            if (filtered.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: var(--text-sub); padding: 15px; font-size: 0.85rem;">No approved matches found for this date.</p>';
-                return;
-            }
-
-            grid.innerHTML = filtered.map((m, mIdx) => {
-                const matchId = `arch_${m.homeTeam}_${m.visitTeam}_${m.date}`.replace(/[^a-zA-Z0-9]/g, '_');
-                const isOpen = openScorecards.has(matchId);
-
-                const gamesHtml = (m.games || []).map((g, idx) => {
-                    let winClass = '';
-                    const isHWin = g.win === 'h' || g.homeWin === true || g.win === 'Home';
-                    const isVWin = g.win === 'v' || g.visitWin === true || g.win === 'Away';
-                    
-                    if (isHWin) winClass = 'win-h';
-                    if (isVWin) winClass = 'win-v';
-
-                    let markerBadge = '';
-                    const has8B = g.h8B || g.v8B || g.home8BB || g.visit8BB;
-                    const hasTR = g.hTR || g.vTR || g.homeTR || g.visitTR;
-
-                    if (has8B) markerBadge = '<span class="badge-8bb">8B</span>';
-                    else if (hasTR) markerBadge = '<span class="badge-run">TR</span>';
-
-                    return `<div class="game-pill ${winClass}">${idx + 1}${markerBadge}</div>`;
-                }).join('');
-
-                const detailedGamesList = (m.games || []).map((g, idx) => {
-                    const hName = g.h || g.homePlayer || g.player1 || g.homeName || '';
-                    const vName = g.v || g.visitPlayer || g.player2 || g.visitName || '';
-                    const winner = g.win;
-
-                    if (!hName && !vName && !winner) return '';
-
-                    const isHWin = winner === 'h' || g.homeWin === true;
-                    const isVWin = winner === 'v' || g.visitWin === true;
-
-                    const hWinStyle = isHWin ? 'color: #3b82f6; font-weight: bold;' : 'color: #94a3b8;';
-                    const vWinStyle = isVWin ? 'color: #ef4444; font-weight: bold;' : 'color: #94a3b8;';
-
-                    const hTR = g.hTR || g.homeTR ? 'TR' : '';
-                    const h8B = g.h8B || g.home8BB ? '8BB' : '';
-                    const vTR = g.vTR || g.visitTR ? 'TR' : '';
-                    const v8B = g.v8B || g.visit8BB ? '8BB' : '';
-
-                    const hMarkers = (hTR || h8B) ? ` [${hTR}${h8B}]` : '';
-                    const vMarkers = (vTR || v8B) ? ` [${vTR}${v8B}]` : '';
-                    const gameNumber = g.id || (idx + 1);
-
-                    return `
-                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--gold); min-width: 40px;">Gm ${gameNumber}:</span>
-                            <span style="flex: 1; text-align: left; ${hWinStyle}">
-                                ${hName || '(Open)'} ${isHWin ? '✓' : ''} <span style="font-size: 0.65rem; color: #fbbf24;">${hMarkers}</span>
-                            </span>
-                            <span style="text-align: center; padding: 0 4px; color: #64748b;">vs</span>
-                            <span style="flex: 1; text-align: right; ${vWinStyle}">
-                                <span style="font-size: 0.65rem; color: #fbbf24;">${vMarkers}</span> ${vName || '(Open)'} ${isVWin ? '✓' : ''}
-                            </span>
-                        </div>
-                    `;
-                }).join('');
-
-                return `
-                    <div class="live-card" style="border-color: #475569;">
-                        <div class="live-card-header">
-                            <span>APPROVED — ${m.date || 'COMPLETED'}</span>
-                            <span style="color: #38bdf8;">OFFICIAL</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.homeTeam || 'Home Team'}</span>
-                            <span class="live-score-badge">${m.homeScore !== undefined ? m.homeScore : 0}</span>
-                        </div>
-                        <div class="live-team-row">
-                            <span>${m.visitTeam || 'Visiting Team'}</span>
-                            <span class="live-score-badge">${m.visitScore !== undefined ? m.visitScore : 0}</span>
-                        </div>
-                        <div class="game-breakdown-bar" style="margin-top: 8px;">
-                            ${gamesHtml}
-                        </div>
-                        <div style="margin-top: 8px; border-top: 1px dashed var(--slate); padding-top: 6px;">
-                            <button onclick="toggleScorecard('${matchId}'); renderArchiveMatches();" style="background: none; border: none; width: 100%; font-size: 0.75rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: bold;">
-                                📋 View Official Scorecard ${isOpen ? '▴' : '▾'}
-                            </button>
-                            <div style="display: ${isOpen ? 'block' : 'none'}; max-height: 180px; overflow-y: auto; margin-top: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;">
-                                ${detailedGamesList || '<p style="text-align: center; font-size: 0.7rem; color: #64748b; padding: 6px;">No individual game matchups recorded.</p>'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
- 
-
     </script>
 </body>
 </html>
