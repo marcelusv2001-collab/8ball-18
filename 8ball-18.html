@@ -647,11 +647,12 @@
         </div>
         
         <div class="settings-btns">
-            <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
-            <button type="button" class="btn-clear" onclick="returnToLanding()" style="background: #1e293b; color: var(--gold); border: 1px solid var(--gold);">🏠 LANDING PAGE</button>
-            <button type="button" id="timer-btn" class="btn-timer" onclick="openTimerModal()">⏱️ <span id="timer-display">00:00</span></button>
-        </div>
-    </div>
+    <button type="button" class="btn-clear" onclick="clearSettings()">RESET ALL</button>
+    <button type="button" class="btn-clear" onclick="closeSettingsPanel()" style="background: #475569; color: white;">CLOSE</button>
+    <button type="button" class="btn-clear" onclick="returnToLanding()" style="background: #1e293b; color: var(--gold); border: 1px solid var(--gold);">🏠 Home Page</button>
+    <button type="button" id="timer-btn" class="btn-timer" onclick="openTimerModal()">⏱️ <span id="timer-display">00:00</span></button>
+</div>
+
 </details>
     
 <main id="scoring-interface">
@@ -948,6 +949,11 @@
         draw();
     }
 
+function closeSettingsPanel() {
+    const setupPanel = document.getElementById('setup-panel');
+    if (setupPanel) setupPanel.open = false;
+}
+    
     async function pollRemoteMatchStatus() {
         const leagueCode = localStorage.getItem('league_code');
         if (!leagueCode || !navigator.onLine) return;
