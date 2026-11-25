@@ -1282,6 +1282,24 @@
         }
     }
 
+async function startAppFlow() {
+    document.getElementById('setup-panel').open = false;
+
+    const rUrl = localStorage.getItem('user_sheet_url');
+    if (rUrl) {
+        await fetchRosters(rUrl, true);
+        return;
+    }
+
+    const hTeam = document.getElementById('h-team').value.trim();
+    const vTeam = document.getElementById('v-team').value.trim();
+    if (hTeam && vTeam) {
+        openRoleSelectionModal(null);
+    } else {
+        alert("Please connect a League Code in SETUP or enter both team names first.");
+    }
+}
+    
     function loadMatchState() {
         const saved = localStorage.getItem('active_match_state');
         if (saved) {
