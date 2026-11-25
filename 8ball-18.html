@@ -586,7 +586,7 @@
 <header id="app-header">
     <div class="header-btns">
         <button type="button" class="reset-btn" onclick="resetBoard()">🗑️</button>
-        <button type="button" class="start-btn" onclick="saveSettings()">START</button>
+        <button type="button" class="start-btn" onclick="startAppFlow()">START</button>
         <a id="view-stats" href="#" target="_blank" class="stats-link-btn">📊 STATS</a>
     </div>
     <h1>8 Ball 18 Games</h1>
@@ -709,8 +709,7 @@
     let visitingSignatureData = null;
     let currentSigningRole = 'home';
 
-    // Manual Role & Scorekeeper Management State
-    let myRole = localStorage.getItem('active_match_role') || 'spectator'; // 'home', 'visitor', or 'spectator'
+    let myRole = localStorage.getItem('active_match_role') || '';
     let myScorekeeperName = localStorage.getItem('active_scorekeeper_name') || '';
     let activeScorekeeperInfo = JSON.parse(localStorage.getItem('remote_active_scorekeeper') || 'null');
     let pendingExistingScorekeeper = null;
@@ -727,45 +726,52 @@
         updateActiveLeagueDisplay();
         
         const savedCode = localStorage.getItem('league_code');
-        let activeMatchFound = false;
-
         if (savedCode) { 
             checkForUpdates(savedCode); 
-            
-            // Check central DB for active match on startup
-            if (navigator.onLine) {
-                try {
-                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(savedCode)}`);
-                    const data = await res.json();
-                    if (data.status === 'success' && Array.isArray(data.matches) && data.matches.length > 0) {
-                        const activeMatch = data.matches.find(m => m.status === 'in-progress') || data.matches[0];
-                        if (activeMatch && activeMatch.homeTeam && activeMatch.visitTeam) {
-                            activeMatchFound = true;
-
-                            document.getElementById('h-team').value = activeMatch.homeTeam;
-                            document.getElementById('v-team').value = activeMatch.visitTeam || activeMatch.visit;
-                            
-                            if (activeMatch.games && Array.isArray(activeMatch.games)) {
-                                state = activeMatch.games;
-                            }
-
-                            if (activeMatch.scorekeeperName) {
-                                activeScorekeeperInfo = {
-                                    name: activeMatch.scorekeeperName,
-                                    side: activeMatch.scorekeeperSide || 'home'
-                                };
-                                localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error("Startup active match check failed", e);
-                }
-            }
         }
 
-        if (!activeMatchFound) {
-            loadMatchState();
+        // Load locally saved session state first
+        loadMatchState();
+
+        // Only fetch remote live match data on refresh if user was ALREADY in an active match (scorekeeper or spectator)
+        const hTeamVal = document.getElementById('h-team')?.value.trim();
+        const vTeamVal = document.getElementById('v-team')?.value.trim();
+        const inActiveSession = (myRole === 'home' || myRole === 'visitor' || myRole === 'spectator') && (hTeamVal || vTeamVal);
+
+        if (inActiveSession && savedCode && navigator.onLine) {
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(savedCode)}`);
+                const data = await res.json();
+                if (data.status === 'success' && Array.isArray(data.matches)) {
+                    const found = data.matches.find(m => 
+                        (m.homeTeam || '').trim().toUpperCase() === hTeamVal.toUpperCase() &&
+                        (m.visitTeam || m.visit || '').trim().toUpperCase() === vTeamVal.toUpperCase()
+                    );
+                    if (found) {
+                        if (found.games && Array.isArray(found.games)) {
+                            state = found.games;
+                        }
+                        if (found.scorekeeperName) {
+                            activeScorekeeperInfo = {
+                                name: found.scorekeeperName,
+                                side: found.scorekeeperSide || 'home'
+                            };
+                            localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                        }
+                        saveMatchState();
+                    }
+                }
+            } catch (e) {
+                console.error("Refresh live sync failed:", e);
+            }
+        } else if (!inActiveSession) {
+            // Ensure clean state on startup/refresh when not in a live session
+            myRole = '';
+            myScorekeeperName = '';
+            activeScorekeeperInfo = null;
+            localStorage.removeItem('active_match_role');
+            localStorage.removeItem('active_scorekeeper_name');
+            localStorage.removeItem('remote_active_scorekeeper');
         }
 
         const savedPayUrl = localStorage.getItem('user_pay_url');
@@ -809,13 +815,12 @@
         initSignaturePad();
         calculateMatchOwed();
 
-        // Background poller to sync remote updates in spectator mode
         setInterval(pollRemoteMatchStatus, 4000);
     });
 
     window.addEventListener('online', () => {
         hideOfflineBanner();
-        if (pendingSyncQueue || localStorage.getItem('active_match_state')) {
+        if (pendingSyncQueue || (localStorage.getItem('active_match_state') && (myRole === 'home' || myRole === 'visitor'))) {
             pendingSyncQueue = false;
             syncLiveMatchStateInBackground();
         }
@@ -842,7 +847,7 @@
     }
 
     function canEditMatch() {
-        return !isApproved && myRole !== 'spectator' && myRole !== '';
+        return !isApproved && myRole !== 'spectator';
     }
 
     // --- MANUAL ROLE & TAKEOVER FLOW ---
@@ -862,7 +867,7 @@
         const warningBox = document.getElementById('active-sk-warning');
         if (existingScorekeeper && existingScorekeeper.name) {
             const sideLabel = existingScorekeeper.side === 'home' ? 'Home Team' : 'Visiting Team';
-            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is currently keeping score. Selecting a team below will take over scorekeeper control.`;
+            warningBox.innerHTML = `⚠️ <b>${existingScorekeeper.name} (${sideLabel})</b> is already keeping live score for this match. They must release control or you must confirm a takeover below.`;
             warningBox.style.display = 'block';
         } else {
             warningBox.style.display = 'none';
@@ -908,6 +913,15 @@
     }
 
     function selectScorekeeperSide(side) {
+        if (pendingExistingScorekeeper && pendingExistingScorekeeper.name) {
+            const sideLabel = pendingExistingScorekeeper.side === 'home' ? 'Home Team' : 'Visiting Team';
+            const proceed = confirm(
+                `Someone is already keeping live score (${pendingExistingScorekeeper.name} - ${sideLabel}).\n\n` +
+                `They need to release control, or click OK to take over scorekeeping duties now.`
+            );
+            if (!proceed) return;
+        }
+
         pendingRoleSide = side;
         const teamName = (side === 'home' 
             ? document.getElementById('h-team').value 
@@ -982,13 +996,56 @@
     }
 
     function switchToSpectator() {
-        if (!confirm("Step down to Spectator Mode? Your inputs will become read-only.")) return;
+        if (!confirm("Release scorekeeper control and step down to Spectator Mode? Your inputs will become read-only.")) return;
 
         myRole = 'spectator';
+        myScorekeeperName = '';
         localStorage.setItem('active_match_role', 'spectator');
+        localStorage.removeItem('active_scorekeeper_name');
+
+        // Notify central DB that scorekeeper released control
+        syncReleaseScorekeeperInBackground();
 
         saveMatchState();
         draw();
+    }
+
+    async function syncReleaseScorekeeperInBackground() {
+        const leagueCode = localStorage.getItem('league_code');
+        if (!leagueCode || !navigator.onLine) return;
+
+        const hT = document.getElementById('h-team')?.value || "Home Team";
+        const vT = document.getElementById('v-team')?.value || "Visiting Team";
+        const hScore = state.filter(g => g.win === 'h').length;
+        const vScore = state.filter(g => g.win === 'v').length;
+        const activeGame = state.find(g => g.win === null) || state[17];
+        const currentRack = activeGame ? activeGame.id : 18;
+
+        const payload = {
+            action: 'updateLiveMatch',
+            leagueCode: leagueCode,
+            homeTeam: hT,
+            visitTeam: vT,
+            homeScore: hScore,
+            visitScore: vScore,
+            currentRack: currentRack,
+            scorekeeperName: '',
+            scorekeeperSide: '',
+            games: state,
+            status: isApproved ? 'completed' : 'in-progress',
+            lastUpdated: new Date().toISOString()
+        };
+
+        try {
+            await fetch(CENTRAL_DB_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+            activeScorekeeperInfo = null;
+            localStorage.removeItem('remote_active_scorekeeper');
+        } catch (e) {}
     }
 
     function closeSettingsPanel() {
@@ -997,6 +1054,8 @@
     }
     
     async function pollRemoteMatchStatus() {
+        if (myRole !== 'spectator') return;
+
         const leagueCode = localStorage.getItem('league_code');
         if (!leagueCode || !navigator.onLine) return;
 
@@ -1010,7 +1069,7 @@
             if (data.status === 'success' && Array.isArray(data.matches)) {
                 const found = data.matches.find(m => 
                     (m.homeTeam || '').toUpperCase() === hT.toUpperCase() &&
-                    (m.visitTeam || '').toUpperCase() === vT.toUpperCase()
+                    (m.visitTeam || m.visit || '').toUpperCase() === vT.toUpperCase()
                 );
 
                 if (found) {
@@ -1020,26 +1079,27 @@
                             side: found.scorekeeperSide || 'home'
                         };
                         localStorage.setItem('remote_active_scorekeeper', JSON.stringify(activeScorekeeperInfo));
+                    } else {
+                        activeScorekeeperInfo = null;
+                        localStorage.removeItem('remote_active_scorekeeper');
                     }
 
-                    if (myRole === 'spectator') {
-                        if (found.games && Array.isArray(found.games)) {
-                            const remoteString = JSON.stringify(found.games);
-                            const localString = JSON.stringify(state);
-                            if (remoteString !== localString) {
-                                state = found.games;
-                                
-                                const scoringInterface = document.getElementById('scoring-interface');
-                                const currentScrollTop = scoringInterface ? scoringInterface.scrollTop : 0;
-                                
-                                draw();
-                                
-                                if (scoringInterface) {
-                                    scoringInterface.scrollTop = currentScrollTop;
-                                }
-                            } else {
-                                renderRoleStatusBar();
+                    if (found.games && Array.isArray(found.games)) {
+                        const remoteString = JSON.stringify(found.games);
+                        const localString = JSON.stringify(state);
+                        if (remoteString !== localString) {
+                            state = found.games;
+                            
+                            const scoringInterface = document.getElementById('scoring-interface');
+                            const currentScrollTop = scoringInterface ? scoringInterface.scrollTop : 0;
+                            
+                            draw();
+                            
+                            if (scoringInterface) {
+                                scoringInterface.scrollTop = currentScrollTop;
                             }
+                        } else {
+                            renderRoleStatusBar();
                         }
                     }
                 }
@@ -1047,22 +1107,19 @@
         } catch (e) {}
     }
 
-    // --- MANUAL ROLE STATUS BAR & TAKEOVER BUTTON ---
     function renderRoleStatusBar() {
         const bar = document.getElementById('role-status-bar');
         if (!bar) return;
 
-        const hTeam = document.getElementById('h-team')?.value || "";
-        const vTeam = document.getElementById('v-team')?.value || "";
-        if (!hTeam && !vTeam) {
+        if (!myRole) {
             bar.innerHTML = '';
             return;
         }
 
-        if (myRole === 'spectator' || !myRole) {
+        if (myRole === 'spectator') {
             const skText = activeScorekeeperInfo && activeScorekeeperInfo.name
                 ? `Active Scorekeeper: ${activeScorekeeperInfo.name} (${activeScorekeeperInfo.side === 'home' ? 'Home' : 'Away'})`
-                : 'Spectator Mode (Read-Only)';
+                : 'Spectator Mode (No Active Scorekeeper)';
             bar.innerHTML = `
                 <div class="spectator-banner">
                     <span>👀 ${skText}</span>
@@ -1075,7 +1132,7 @@
             bar.innerHTML = `
                 <div class="spectator-banner" style="border-color: #22c55e; color: #86efac;">
                     <span>✍️ Scorekeeper: ${skLabel}</span>
-                    <button type="button" class="btn-takeover" style="background: #334155; color: #f8fafc;" onclick="switchToSpectator()">Step Down</button>
+                    <button type="button" class="btn-takeover" style="background: #334155; color: #f8fafc;" onclick="switchToSpectator()">Release Control</button>
                 </div>
             `;
         }
@@ -1093,6 +1150,55 @@
     function returnToLanding() {
         localStorage.removeItem('has_visited_8ball18');
         window.location.href = 'index.html';
+    }
+
+    // Triggered ONLY via the START button
+    async function startAppFlow() {
+        const leagueCode = localStorage.getItem('league_code');
+        document.getElementById('setup-panel').open = false;
+
+        if (leagueCode && navigator.onLine) {
+            try {
+                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                const data = await res.json();
+                
+                if (data.status === 'success' && Array.isArray(data.matches) && data.matches.length > 0) {
+                    const activeMatch = data.matches.find(m => m.status === 'in-progress') || data.matches[0];
+                    
+                    if (activeMatch && activeMatch.homeTeam && (activeMatch.visitTeam || activeMatch.visit)) {
+                        document.getElementById('h-team').value = activeMatch.homeTeam;
+                        document.getElementById('v-team').value = activeMatch.visitTeam || activeMatch.visit;
+                        
+                        if (activeMatch.games && Array.isArray(activeMatch.games)) {
+                            state = activeMatch.games;
+                        }
+
+                        const existingSk = activeMatch.scorekeeperName
+                            ? { name: activeMatch.scorekeeperName, side: activeMatch.scorekeeperSide || 'home' }
+                            : null;
+
+                        draw();
+                        openRoleSelectionModal(existingSk);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error("START active match check failed:", e);
+            }
+        }
+
+        const rUrl = localStorage.getItem('user_sheet_url');
+        if (rUrl) {
+            await fetchRosters(rUrl, true);
+        } else {
+            const hTeam = document.getElementById('h-team').value.trim();
+            const vTeam = document.getElementById('v-team').value.trim();
+            if (hTeam && vTeam) {
+                openRoleSelectionModal(null);
+            } else {
+                alert("Please connect a League Code in SETUP or enter both team names first.");
+            }
+        }
     }
  
     function saveMatchState() {
@@ -1114,7 +1220,7 @@
             return;
         }
 
-        if (canEditMatch()) {
+        if (myRole === 'home' || myRole === 'visitor') {
             syncLiveMatchStateInBackground();
         }
     }
@@ -1185,7 +1291,7 @@
                 if (parsed.vTeam !== undefined) document.getElementById('v-team').value = parsed.vTeam;
                 if (parsed.state) state = parsed.state;
                 if (parsed.isApproved !== undefined) isApproved = parsed.isApproved;
-                if (parsed.role) myRole = parsed.role;
+                if (parsed.role !== undefined) myRole = parsed.role;
                 if (parsed.scorekeeperName !== undefined) myScorekeeperName = parsed.scorekeeperName;
             } catch(e) { console.error("Could not load match state", e); }
         }
@@ -1623,53 +1729,6 @@
         document.getElementById('update-modal-text').innerText = message;
         document.getElementById('update-modal').style.display = 'flex';
     }
-
-    async function saveSettings() {
-        const rUrl = document.getElementById('sheet-url').value.trim();
-        const sUrl = document.getElementById('stats-url').value.trim();
-        const pUrl = document.getElementById('pay-url-input').value.trim();
-
-        if (sUrl) { localStorage.setItem('user_stats_url', sUrl); updateStatsButton(sUrl); }
-        if (pUrl) { localStorage.setItem('user_pay_url', pUrl); }
-        document.getElementById('setup-panel').open = false;
-
-        const leagueCode = localStorage.getItem('league_code');
-        if (leagueCode && navigator.onLine) {
-            try {
-                const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
-                const data = await res.json();
-                
-                if (data.status === 'success' && Array.isArray(data.matches) && data.matches.length > 0) {
-                    const activeMatch = data.matches.find(m => m.status === 'in-progress') || data.matches[0];
-                    
-                    if (activeMatch && activeMatch.homeTeam && activeMatch.visitTeam) {
-                        if (rUrl) {
-                            localStorage.setItem('user_sheet_url', rUrl);
-                            fetchRosters(rUrl, false);
-                        }
-
-                        document.getElementById('h-team').value = activeMatch.homeTeam;
-                        document.getElementById('v-team').value = activeMatch.visitTeam || activeMatch.visit;
-                        
-                        if (activeMatch.games && Array.isArray(activeMatch.games)) {
-                            state = activeMatch.games;
-                        }
-
-                        saveMatchState();
-                        draw();
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.error("START active match check failed:", e);
-            }
-        }
-
-        if (rUrl) { 
-            localStorage.setItem('user_sheet_url', rUrl); 
-            await fetchRosters(rUrl, true); 
-        }
-    }
     
     function setStatus(type) {
         const led = document.getElementById('led');
@@ -1849,17 +1908,48 @@
             
             closeMatchPickerModal();
 
-            openRoleSelectionModal(null);
+            // Check if someone is already keeping live score for this selected matchup
+            let existingSk = null;
+            const leagueCode = localStorage.getItem('league_code');
+            if (leagueCode && navigator.onLine) {
+                try {
+                    const res = await fetch(`${CENTRAL_DB_URL}?action=getLiveMatches&code=${encodeURIComponent(leagueCode)}`);
+                    const data = await res.json();
+                    if (data.status === 'success' && Array.isArray(data.matches)) {
+                        const found = data.matches.find(m =>
+                            (m.homeTeam || '').trim().toUpperCase() === selected.home.trim().toUpperCase() &&
+                            (m.visitTeam || m.visit || '').trim().toUpperCase() === selected.visit.trim().toUpperCase()
+                        );
+                        if (found) {
+                            if (found.games && Array.isArray(found.games)) {
+                                state = found.games;
+                                draw();
+                            }
+                            if (found.scorekeeperName) {
+                                existingSk = { name: found.scorekeeperName, side: found.scorekeeperSide || 'home' };
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            openRoleSelectionModal(existingSk);
         } else {
             closeMatchPickerModal();
         }
     }
     
     function clearSelectedMatch() {
-        if (!canEditMatch() && myRole !== '') return;
+        if (!canEditMatch()) return;
         document.getElementById('h-team').value = "";
         document.getElementById('v-team').value = "";
         document.getElementById('clear-match-btn').style.display = 'none';
+        myRole = '';
+        myScorekeeperName = '';
+        activeScorekeeperInfo = null;
+        localStorage.removeItem('active_match_role');
+        localStorage.removeItem('active_scorekeeper_name');
+        localStorage.removeItem('remote_active_scorekeeper');
         saveMatchState();
         draw();
     }
@@ -2048,7 +2138,7 @@
             const visitTeamVal = (document.getElementById('v-team')?.value || "").trim();
             const leagueCode = localStorage.getItem('league_code');
 
-            if (leagueCode && navigator.onLine) {
+            if (leagueCode && navigator.onLine && (myRole === 'home' || myRole === 'visitor')) {
                 const clearPayload = {
                     action: 'clearLiveMatch',
                     leagueCode: leagueCode,
@@ -2071,11 +2161,11 @@
             isApproved = false;
             homeSignatureData = null;
             visitingSignatureData = null;
-            myRole = 'spectator';
+            myRole = '';
             myScorekeeperName = '';
             activeScorekeeperInfo = null;
 
-            localStorage.setItem('active_match_role', 'spectator');
+            localStorage.removeItem('active_match_role');
             localStorage.removeItem('active_scorekeeper_name');
             localStorage.removeItem('remote_active_scorekeeper');
 
